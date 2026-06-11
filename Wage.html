@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>급여 계산기</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1117">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="급여계산기">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<style>
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--bg:#0f1117;--card:#1a1d27;--accent:#6c8cff;--as:rgba(108,140,255,.12);--green:#34d399;--gs:rgba(52,211,153,.12);--orange:#fb923c;--os:rgba(251,146,60,.12);--red:#f87171;--rs:rgba(248,113,113,.12);--purple:#a78bfa;--ps:rgba(167,139,250,.12);--text:#e8eaf0;--dim:#8b8fa3;--border:#2a2e3e;--ibg:#141620}
+body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;max-width:480px;margin:0 auto;padding:0 16px 120px;overflow-x:hidden}
+.hd{text-align:center;padding:28px 0 8px}.hd h1{font-size:22px;font-weight:700}.hd p{font-size:13px;color:var(--dim);margin-top:4px}
+.tb{display:flex;gap:3px;background:var(--card);border-radius:14px;padding:4px;margin-bottom:20px}
+.tb button{flex:1;padding:10px 0;text-align:center;font-size:12px;color:var(--dim);background:transparent;border-radius:10px;border:none;cursor:pointer;font-family:inherit}
+.tb button.on{font-weight:600;color:var(--text);background:var(--accent)}
+.cd{background:var(--card);border-radius:16px;padding:20px;margin-bottom:12px;border:1px solid var(--border)}
+label{font-size:12px;font-weight:500;color:var(--dim);margin-bottom:6px;display:block}
+.iw{position:relative;margin-bottom:12px}
+.iw input{width:100%;padding:10px 12px;font-size:15px;background:var(--ibg);border:1px solid var(--border);border-radius:10px;color:var(--text);outline:none;font-family:inherit;-webkit-appearance:none}
+.iw input:focus{border-color:var(--accent)}
+.iw .sf{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--dim);pointer-events:none}
+.rw{display:flex;gap:10px}.rw>div{flex:1}
+.bt{width:100%;padding:12px;font-size:15px;font-weight:600;color:#fff;background:var(--accent);border:none;border-radius:12px;cursor:pointer;font-family:inherit;margin-top:4px}
+.bt:active{opacity:.8}.bt-g{background:var(--green)}.bt-o{background:var(--orange)}
+.bs{width:auto;padding:7px 12px;font-size:12px;border-radius:8px;margin-top:0}
+.ba{background:var(--as);color:var(--accent)}.bd{background:var(--rs);color:var(--red)}.bp{background:var(--ps);color:var(--purple)}
+.br{display:flex;gap:8px;margin-top:4px}.br .bt{flex:1}
+.bg{display:inline-block;font-size:10px;font-weight:600;border-radius:6px;padding:2px 7px;margin-left:4px;vertical-align:middle}
+.bgg{color:var(--green);background:var(--gs)}.bgo{color:var(--orange);background:var(--os)}.bga{color:var(--accent);background:var(--as)}.bgr{color:var(--red);background:var(--rs)}.bgp{color:var(--purple);background:var(--ps)}
+.nt{background:var(--gs);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;color:var(--green)}
+.ec{background:var(--card);border-radius:14px;padding:14px 16px;margin-bottom:10px;border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.ec.res{opacity:.5}
+.en{font-size:15px;font-weight:600}.ei{font-size:13px;color:var(--dim);margin-top:3px}.em{font-size:12px;color:var(--dim);margin-top:2px}
+.ea{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.ey{text-align:center;padding:48px 20px;color:var(--dim);font-size:14px}
+.ey small{font-size:12px;display:block;margin-top:4px}
+.mp{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:16px}
+.mp button{background:var(--as);color:var(--accent);border:none;border-radius:8px;padding:8px 14px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+.mp span{font-size:17px;font-weight:700;min-width:120px;text-align:center}
+.pr{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+.pl{font-size:14px;color:var(--dim)}.pv{font-size:14px;font-weight:600}
+.tr{display:flex;justify-content:space-between;align-items:center;padding:14px 0 4px}
+.tl{font-size:16px;font-weight:700}.tv{font-size:20px;font-weight:800;color:var(--accent)}
+.gt{background:linear-gradient(135deg,#1e2235,#1a1d27);border-color:var(--accent)}
+.seg{display:flex;gap:4px;margin-bottom:12px}
+.seg button{flex:1;padding:9px;font-size:13px;font-weight:500;border:1px solid var(--border);border-radius:10px;background:var(--ibg);color:var(--dim);cursor:pointer;font-family:inherit}
+.seg button.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600}
+.gseg{display:flex;gap:4px;margin-bottom:12px}
+.gseg button{flex:1;padding:9px;font-size:13px;border:1px solid var(--border);border-radius:10px;background:var(--ibg);color:var(--dim);cursor:pointer;font-family:inherit}
+.gseg button.m.on{background:rgba(108,140,255,.2);color:var(--accent);border-color:var(--accent);font-weight:600}
+.gseg button.f.on{background:rgba(251,146,60,.2);color:var(--orange);border-color:var(--orange);font-weight:600}
+.fb{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}
+.fb button{padding:7px 14px;font-size:12px;border:1px solid var(--border);border-radius:20px;background:transparent;color:var(--dim);cursor:pointer;font-family:inherit}
+.fb button.on{background:var(--as);color:var(--accent);border-color:var(--accent)}
+.ft{text-align:center;padding:24px 0 8px;font-size:11px;color:var(--dim)}
+.ss{margin-top:12px}.ss h3{font-size:14px;font-weight:600;margin-bottom:10px;color:var(--dim)}
+.sbb{display:flex;flex-direction:column;gap:8px}.sbb .bt{font-size:14px}
+input[type=file]{display:none}
+.rc{background:var(--card);border-radius:14px;padding:16px;margin-bottom:10px;border:1px solid var(--border)}
+
+/* Calendar */
+.cal{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid var(--border)}
+.cal-hd{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;margin-bottom:8px}
+.cal-hd span{font-size:11px;font-weight:600;color:var(--dim);padding:4px 0}
+.cal-hd span:first-child{color:var(--red)}
+.cal-hd span:last-child{color:var(--accent)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-cell{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;cursor:pointer;position:relative;font-size:14px;font-weight:500;color:var(--text);transition:all .15s;border:2px solid transparent}
+.cal-cell:active{transform:scale(.93)}
+.cal-cell.empty{cursor:default}
+.cal-cell.empty:active{transform:none}
+.cal-cell.sun{color:var(--red)}
+.cal-cell.sat{color:var(--accent)}
+.cal-cell.today{background:var(--as);font-weight:700}
+.cal-cell.sel{border-color:var(--accent);background:var(--as)}
+.cal-cell .dot{width:5px;height:5px;border-radius:50%;background:var(--green);position:absolute;bottom:4px}
+.cal-cell .dot.multi{width:12px;height:5px;border-radius:3px}
+.cal-cell .cnt{font-size:8px;color:var(--green);position:absolute;bottom:2px;font-weight:700}
+.dots{display:flex;gap:2px;position:absolute;bottom:3px;justify-content:center}
+.dots span{width:6px;height:6px;border-radius:50%;display:block}
+.legend{display:flex;flex-wrap:wrap;gap:8px;padding:8px 4px;margin-bottom:12px}
+.leg-item{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--dim)}
+.leg-dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0}
+.emp-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.emp-chip{padding:9px 14px;font-size:13px;font-weight:500;border:1.5px solid var(--border);border-radius:20px;background:var(--ibg);color:var(--dim);cursor:pointer;font-family:inherit;transition:all .15s;min-height:40px}
+.emp-chip:active{transform:scale(.95)}
+.emp-chip.on{font-weight:700}
+.time-ok{flex-shrink:0;padding:10px 12px;font-size:13px;font-weight:600;background:var(--as);color:var(--accent);border:none;border-radius:8px;cursor:pointer;font-family:inherit;min-height:44px}
+.time-ok:active{opacity:.7}
+.time-disp{flex:1;min-width:0;padding:10px;font-size:15px;font-weight:600;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;cursor:pointer;min-height:44px;text-align:center}
+.time-disp.emp-ty{color:var(--dim);font-weight:400}
+.time-disp:active{border-color:var(--accent)}
+.time-del{flex-shrink:0;width:36px;height:44px;font-size:14px;background:var(--rs);color:var(--red);border:none;border-radius:8px;cursor:pointer;font-family:inherit}
+.time-del:active{opacity:.7}
+.tp-ov{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px}
+.tp-box{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:20px;width:100%;max-width:340px}
+.tp-title{font-size:16px;font-weight:700;margin-bottom:14px;text-align:center}
+.tp-ampm{display:flex;gap:6px;margin-bottom:14px}
+.tp-ampm .tp-btn{flex:1;padding:11px}
+.tp-lbl{font-size:12px;color:var(--dim);font-weight:600;margin-bottom:6px}
+.tp-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:14px}
+.tp-btn{padding:11px 0;font-size:14px;font-weight:500;background:var(--ibg);color:var(--text);border:1px solid var(--border);border-radius:9px;cursor:pointer;font-family:inherit;min-height:42px}
+.tp-btn.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700}
+.tp-btn:active{transform:scale(.94)}
+.tp-cancel{width:100%;padding:12px;font-size:14px;font-weight:600;background:var(--rs);color:var(--red);border:none;border-radius:10px;cursor:pointer;font-family:inherit}
+
+/* Day detail panel */
+.dp{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid var(--accent)}
+.dp-title{font-size:16px;font-weight:700;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+.dp-close{background:var(--rs);color:var(--red);border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.emp-row{background:var(--ibg);border-radius:12px;padding:12px;margin-bottom:8px;border:1px solid var(--border)}
+.emp-row-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.emp-row-nm{font-size:14px;font-weight:600}
+.emp-row-hrs{font-size:13px;font-weight:700;color:var(--green)}
+.time-row{display:flex;align-items:center;gap:8px}
+.time-row input[type=time]{flex:1;min-width:0;width:100%;padding:10px 10px;font-size:16px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;outline:none;-webkit-appearance:none;min-height:44px;text-align:center}
+.time-row input[type=time]::-webkit-date-and-time-value{text-align:center}
+.time-row input[type=time]:focus{border-color:var(--accent)}
+.time-row .sep{color:var(--dim);font-weight:600;flex-shrink:0}
+.hol-chk{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:12px;color:var(--dim)}
+.hol-chk input{width:16px;height:16px;accent-color:var(--red)}
+.sub-info{font-size:11px;color:var(--dim);margin-top:6px}
+.sub-info span{color:var(--orange)}
+
+/* Summary cards */
+.sum-card{background:var(--card);border-radius:14px;padding:14px 16px;margin-bottom:8px;border:1px solid var(--border);cursor:pointer}
+.sum-card .ch{display:flex;justify-content:space-between;align-items:center}
+.sum-card .det{margin-top:12px;border-top:1px solid var(--border);padding-top:12px}
+.ws{background:var(--as);border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:12px;color:var(--accent)}
+.ws.ok{background:var(--gs);color:var(--green)}
+</style>
+</head>
+<body>
+<div class="hd"><h1>급여 계산기</h1><p>출퇴근 기록 · 자동 급여 계산</p></div>
+<div class="tb" id="tabBar"></div>
+<div id="content"></div>
+<div class="ft" id="footerNote">최저시급 · 야간(22~06시) 50% · 연장(8h초과) 50%</div>
+<input type="file" id="rfi" accept=".json">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+var SK="wage-v6",TABS=["직원관리","급여계산","기록보기","설정"],DN=["일","월","화","수","목","금","토"];
+// 연도별 최저시급 (새 연도 확정 시 한 줄만 추가하세요)
+var MIN_WAGE={2023:9620,2024:9860,2025:10030,2026:10320};
+function getMinWage(){
+  var y=new Date().getFullYear();
+  if(MIN_WAGE[y])return MIN_WAGE[y];
+  // 해당 연도 값이 없으면 가장 최근 연도 값 사용
+  var years=Object.keys(MIN_WAGE).map(Number).sort(function(a,b){return b-a});
+  return MIN_WAGE[years[0]];
+}
+function fmtComma(v){var n=String(v).replace(/[^0-9]/g,"");return n?Number(n).toLocaleString("ko-KR"):"";}
+var EMP_COLORS=["#6c8cff","#34d399","#fb923c","#f87171","#a78bfa","#f472b6","#38bdf8","#fbbf24","#4ade80","#e879f9","#22d3ee","#ef4444","#84cc16","#c084fc"];
+function empColor(idx){return EMP_COLORS[idx%EMP_COLORS.length]}
+var S={tab:0,emps:[],recs:[],logs:{},deds:{},showForm:false,editId:null,selDay:null,expSum:null,expRec:null,
+  month:(function(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")})(),
+  filter:"active"};
+var fGender="male";
+
+function load(){try{var d=JSON.parse(localStorage.getItem(SK));if(d){S.emps=d.emps||[];S.recs=d.recs||[];S.logs=d.logs||{};S.deds=d.deds||{};migrate()}}catch(e){}}
+function migrate(){
+  S.emps.forEach(function(e){
+    if(!e.wageHistory||!e.wageHistory.length){
+      e.wageHistory=[{date:"2000-01-01",wage:e.wage||getMinWage()}];
+    }else{
+      // 월 단위 이력을 일 단위로 변환
+      e.wageHistory=e.wageHistory.map(function(wh){
+        if(wh.month&&!wh.date)return{date:wh.month+"-01",wage:wh.wage};
+        return wh;
+      });
+    }
+  });
+}
+function sv(){localStorage.setItem(SK,JSON.stringify({emps:S.emps,recs:S.recs,logs:S.logs,deds:S.deds}))}
+function gid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function fm(n){return Math.round(n).toLocaleString("ko-KR")}
+function esc(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML}
+function dim(mo){var p=mo.split("-");return new Date(+p[0],+p[1],0).getDate()}
+function dow(mo,d){var p=mo.split("-");return new Date(+p[0],+p[1]-1,d).getDay()}
+function todayStr(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+d.getDate()}
+
+function overlap(a,b,c,d){return Math.max(0,Math.min(b,d)-Math.max(a,c))}
+function calcDay(st,en,brk){
+  if(!st||!en)return{total:0,night:0,ot:0};
+  var a=st.split(":"),b=en.split(":");
+  var sm=+a[0]*60+(+a[1]),em=+b[0]*60+(+b[1]);
+  if(em<=sm)em+=1440;
+  var tot=(em-sm-(brk||0))/60;if(tot<0)tot=0;
+  var nm=overlap(sm,em,0,360)+overlap(sm,em,1320,1440)+overlap(sm,em,1440,1800);
+  return{total:Math.round(tot*100)/100,night:Math.round(nm/60*100)/100,ot:Math.round(Math.max(0,tot-8)*100)/100};
+}
+
+function getLog(eid,mo,d){var k=eid+"_"+mo;return(S.logs[k]||{})[d]||{}}
+function setLogEntry(eid,mo,d,key,val){
+  var k=eid+"_"+mo;if(!S.logs[k])S.logs[k]={};if(!S.logs[k][d])S.logs[k][d]={};
+  S.logs[k][d][key]=val;sv();
+}
+function dayHasData(mo,d){
+  var found=false;
+  activeE().forEach(function(e){var l=getLog(e.id,mo,d);if(l.start&&l.end)found=true;});
+  return found;
+}
+function dayEmpCount(mo,d){
+  var c=0;activeE().forEach(function(e){var l=getLog(e.id,mo,d);if(l.start&&l.end)c++;});return c;
+}
+function dayEmpColors(mo,d){
+  var colors=[];var emps=activeE();
+  emps.forEach(function(e,i){var l=getLog(e.id,mo,d);if(l.start&&l.end)colors.push(empColor(i));});
+  return colors;
+}
+
+function calcMonthPay(e,mo){
+  if(e.status==="resigned")return{base:0,weekly:0,night:0,ot:0,hol:0,total:0,weeks:[],details:[],wage:0};
+  var days=dim(mo),brk=e.breakMin||0,weeks={},details=[];
+  for(var d=1;d<=days;d++){
+    var l=getLog(e.id,mo,d),dc=calcDay(l.start||"",l.end||"",brk);
+    var dw=dow(mo,d),wk=Math.ceil(d/7);
+    var dayWage=wageForDate(e,mo+"-"+String(d).padStart(2,"0"));
+    if(!weeks[wk])weeks[wk]={hours:0,days:0,lastWage:dayWage};
+    if(dc.total>0){weeks[wk].hours+=dc.total;weeks[wk].days++;weeks[wk].lastWage=dayWage;}
+    details.push({day:d,dow:dw,start:l.start||"",end:l.end||"",isHol:!!l.isHol,total:dc.total,night:dc.night,ot:dc.ot,wage:dayWage});
+  }
+  var base=0,nightP=0,otP=0,holP=0,weeklyP=0;
+  details.forEach(function(dd){if(dd.total>0){
+    var w=dd.wage;
+    if(dd.isHol){base+=dd.total*w;var r8=Math.min(dd.total,8),ex=Math.max(0,dd.total-8);holP+=r8*w*0.5+ex*w;nightP+=dd.night*w*0.5;}
+    else{base+=dd.total*w;nightP+=dd.night*w*0.5;otP+=dd.ot*w*0.5;}
+  }});
+  var wkInfo=[];
+  for(var w2 in weeks){var ww=weeks[w2];var el=ww.hours>=15&&ww.days>=1;var wp=el?(ww.hours/ww.days)*ww.lastWage:0;weeklyP+=wp;
+    wkInfo.push({week:+w2,hours:Math.round(ww.hours*10)/10,days:ww.days,pay:wp,ok:el});}
+  return{base:base,weekly:weeklyP,night:nightP,ot:otP,hol:holP,total:base+nightP+otP+holP+weeklyP,weeks:wkInfo,details:details,wage:wageForMonth(e,mo)};
+}
+function activeE(){return S.emps.filter(function(e){return e.status==="active"})}
+
+// 해당 날짜에 적용되는 시급 반환 (시급 이력 기반)
+function wageForDate(e,dateStr){
+  if(e.wageHistory&&e.wageHistory.length){
+    var sorted=e.wageHistory.slice().sort(function(a,b){return a.date<b.date?-1:1});
+    var applicable=null;
+    sorted.forEach(function(wh){if(wh.date<=dateStr)applicable=wh.wage;});
+    if(applicable!==null)return applicable;
+    return sorted[0].wage;
+  }
+  return e.wage||0;
+}
+// 해당 월의 대표 시급 (월초 기준, 목록 표시용)
+function wageForMonth(e,mo){return wageForDate(e,mo+"-01")}
+
+function render(){
+  document.getElementById("tabBar").innerHTML=TABS.map(function(t,i){
+    return'<button class="'+(S.tab===i?"on":"")+'" onclick="setTab('+i+')">'+t+'</button>';}).join("");
+  var c=document.getElementById("content");
+  if(S.tab===0)c.innerHTML=rEmp();else if(S.tab===1)c.innerHTML=rCalc();else if(S.tab===2)c.innerHTML=rRec();else c.innerHTML=rSet();
+}
+function setTab(i){S.tab=i;S.showForm=false;S.editId=null;S.selDay=null;S.expSum=null;render()}
+
+// ═══ 직원관리 ═══
+function rEmp(){
+  if(S.editId)return rForm(S.emps.find(function(e){return e.id===S.editId}),true);
+  if(S.showForm)return rForm(null,false);
+  var act=S.emps.filter(function(e){return e.status==="active"}),res=S.emps.filter(function(e){return e.status==="resigned"});
+  var h='<button class="bt" onclick="showAdd()">+ 새 직원 등록</button>';
+  h+='<div class="fb" style="margin-top:14px">';
+  h+='<button class="'+(S.filter==="active"?"on":"")+'" onclick="sF(\'active\')">재직('+act.length+')</button>';
+  h+='<button class="'+(S.filter==="resigned"?"on":"")+'" onclick="sF(\'resigned\')">퇴사('+res.length+')</button>';
+  h+='<button class="'+(S.filter==="all"?"on":"")+'" onclick="sF(\'all\')">전체('+S.emps.length+')</button></div>';
+  var list=S.filter==="active"?act:S.filter==="resigned"?res:S.emps;
+  if(!list.length)return h+'<div class="ey">'+(S.filter==="resigned"?"퇴사자가 없습니다":"등록된 직원이 없습니다")+'<small>'+(S.filter==="active"?"위 버튼으로 추가하세요":"")+'</small></div>';
+  list.forEach(function(e){
+    var isR=e.status==="resigned",gi=e.gender==="female"?"👩":"👨";
+    h+='<div class="ec'+(isR?" res":"")+'"><div>';
+    h+='<div class="en">'+gi+' '+esc(e.name)+' <span class="bg '+(isR?"bgr":"bgg")+'">'+(isR?"퇴사":"재직")+'</span></div>';
+    h+='<div class="ei">시급 '+fm(wageForMonth(e,S.month))+'원'+(e.breakMin?' · 휴게'+e.breakMin+'분':'')+'</div>';
+    if(e.hireDate)h+='<div class="em">📅 입사 '+esc(e.hireDate)+(e.resignDate?' · 퇴사 '+esc(e.resignDate):'')+'</div>';
+    if(e.phone)h+='<div class="em">📞 '+esc(e.phone)+'</div>';
+    if(e.address)h+='<div class="em">📍 '+esc(e.address)+'</div>';
+    if(e.memo)h+='<div class="em">📝 '+esc(e.memo)+'</div>';
+    h+='</div><div class="ea">';
+    h+='<button class="bt bs ba" onclick="edE(\''+e.id+'\')">수정</button>';
+    if(isR)h+='<button class="bt bs" style="background:var(--gs);color:var(--green)" onclick="reE(\''+e.id+'\')">복직</button>';
+    else h+='<button class="bt bs bp" onclick="rsE(\''+e.id+'\')">퇴사</button>';
+    h+='<button class="bt bs bd" onclick="dlE(\''+e.id+'\')">삭제</button>';
+    h+='</div></div>';
+  });
+  return h;
+}
+function rForm(emp,isEd){
+  var todayStr2=(function(){var dt=new Date();return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0")})();
+  var d=emp||{name:"",gender:"male",phone:"",address:"",wage:getMinWage(),breakMin:0,memo:"",status:"active",wageHistory:[],hireDate:todayStr2,resignDate:""};
+  if(emp){fGender=emp.gender||"male";}
+  var h='<div class="cd"><div style="font-size:16px;font-weight:700;margin-bottom:16px">'+(isEd?"직원 정보 수정":"새 직원 등록")+'</div>';
+  h+='<div class="rw"><div style="flex:1.2">'+fi("이름","fn",d.name,"text","","홍길동")+'</div>';
+  h+='<div style="flex:.8"><label>성별</label><div class="gseg" id="gS"><button class="m'+(fGender==="male"?" on":"")+'" onclick="sG(\'male\')">남</button><button class="f'+(fGender==="female"?" on":"")+'" onclick="sG(\'female\')">여</button></div></div></div>';
+  h+=fi("연락처","fph",d.phone,"tel","","010-0000-0000");
+  h+='<div class="rw"><div><label>입사일</label><div class="iw"><input type="date" id="fhd" value="'+(d.hireDate||todayStr2)+'"></div></div>';
+  h+='<div><label>퇴사일 (선택)</label><div class="iw"><input type="date" id="frd" value="'+(d.resignDate||"")+'"></div></div></div>';
+  h+='<div class="rw"><div><label>시급</label><div class="iw"><input type="text" inputmode="numeric" id="fw" value="'+fmtComma(d.wage)+'" oninput="this.value=fmtComma(this.value)"><span class="sf">원</span></div></div>';
+  h+='<div>'+fi("휴게시간","fbr",d.breakMin,"number","분")+'</div></div>';
+  // 시급 적용 시작일 (수정 시에만 노출)
+  if(isEd){
+    var todayD=(function(){var dt=new Date();return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0")})();
+    h+='<div><label>시급 적용 시작일</label><div class="iw"><input type="date" id="fwd" value="'+todayD+'"></div></div>';
+    h+='<div class="nt" style="background:var(--os);color:var(--orange)">시급을 변경하면 위 날짜부터 새 시급이 적용됩니다. 이전 급여 기록은 그대로 유지됩니다.</div>';
+    // 시급 이력 표시
+    if(d.wageHistory&&d.wageHistory.length){
+      h+='<div style="font-size:12px;font-weight:600;color:var(--dim);margin-bottom:6px">📜 시급 변경 이력</div>';
+      h+='<div style="background:var(--ibg);border-radius:10px;padding:10px 14px;margin-bottom:12px">';
+      d.wageHistory.slice().sort(function(a,b){return a.date<b.date?-1:1}).forEach(function(wh){
+        var wd=wh.date.split("-");
+        var label=(wd[0]==="2000")?"등록 시":wd[0]+"년 "+(+wd[1])+"월 "+(+wd[2])+"일~";
+        h+='<div style="font-size:13px;color:var(--text);padding:3px 0;display:flex;justify-content:space-between"><span>'+label+'</span><span style="font-weight:600">'+fmtComma(wh.wage)+'원</span></div>';
+      });
+      h+='</div>';
+    }
+  }
+  h+=fi("주소","fad",d.address,"text","","서울시 강남구...");
+  h+='<div class="nt">급여계산 탭의 달력에서 날짜를 눌러 출퇴근 시간을 입력하세요</div>';
+  h+=fi("메모","fme",d.memo,"text","","예: 주말만 근무");
+  h+='<div class="br"><button class="bt" onclick="svE('+isEd+')">'+(isEd?"수정 완료":"등록하기")+'</button>';
+  h+='<button class="bt bd" style="flex:.4" onclick="cnF()">취소</button></div></div>';
+  return h;
+}
+function fi(l,id,v,t,sf,ph){return'<div><label>'+l+'</label><div class="iw"><input type="'+t+'" id="'+id+'" value="'+esc(String(v||""))+'"'+(ph?' placeholder="'+ph+'"':'')+'>'+(sf?'<span class="sf">'+sf+'</span>':'')+'</div></div>';}
+function sG(g){fGender=g;var b=document.querySelectorAll("#gS button");b[0].className="m"+(g==="male"?" on":"");b[1].className="f"+(g==="female"?" on":"")}
+function showAdd(){S.showForm=true;fGender="male";render()}
+function edE(id){S.editId=id;render()}
+function cnF(){S.showForm=false;S.editId=null;render()}
+function sF(f){S.filter=f;render()}
+function svE(isEd){
+  var nm=document.getElementById("fn").value.trim();if(!nm)return alert("이름을 입력하세요");
+  var newWage=Number(document.getElementById("fw").value.replace(/[^0-9]/g,""))||0;
+  var hireDate=document.getElementById("fhd").value;
+  var resignDate=document.getElementById("frd").value;
+  var base={name:nm,gender:fGender,phone:document.getElementById("fph").value.trim(),address:document.getElementById("fad").value.trim(),
+    wage:newWage,breakMin:Number(document.getElementById("fbr").value)||0,
+    hireDate:hireDate,resignDate:resignDate,
+    memo:document.getElementById("fme").value.trim()};
+  if(isEd){
+    var i=S.emps.findIndex(function(e){return e.id===S.editId});
+    var old=S.emps[i];
+    var hist=(old.wageHistory||[]).slice();
+    if(!hist.length){hist.push({date:"2000-01-01",wage:old.wage});}
+    // 시급이 바뀌었으면 적용일과 함께 이력 추가
+    var effDate=document.getElementById("fwd").value;
+    if(newWage!==old.wage&&effDate){
+      hist=hist.filter(function(wh){return wh.date!==effDate});
+      hist.push({date:effDate,wage:newWage});
+    }
+    // 퇴사일 입력 시 자동으로 퇴사 처리, 비우면 재직 유지
+    var newStatus=old.status;
+    if(resignDate&&old.status==="active")newStatus="resigned";
+    if(!resignDate&&old.status==="resigned")newStatus=old.status; // 복직은 복직 버튼으로
+    S.emps[i]=Object.assign({},old,base,{id:S.editId,status:newStatus,wageHistory:hist});
+    S.editId=null;
+  }else{
+    S.emps.push(Object.assign({},base,{id:gid(),status:resignDate?"resigned":"active",wageHistory:[{date:"2000-01-01",wage:newWage}]}));
+    S.showForm=false;
+  }
+  sv();render();
+}
+function dlE(id){if(!confirm("삭제하시겠습니까?"))return;S.emps=S.emps.filter(function(e){return e.id!==id});sv();render()}
+function rsE(id){if(!confirm("퇴사 처리하시겠습니까?"))return;var e=S.emps.find(function(x){return x.id===id});e.status="resigned";if(!e.resignDate){var dt=new Date();e.resignDate=dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0");}sv();render()}
+function reE(id){var e=S.emps.find(function(x){return x.id===id});e.status="active";e.resignDate="";sv();render()}
+
+// ═══ 급여계산 (달력 UI) ═══
+function rCalc(){
+  var ym=S.month.split("-").map(Number),y=ym[0],m=ym[1];
+  var emps=activeE();
+  var h='<div class="mp"><button onclick="shM(-1)">◀</button><span>'+y+'년 '+m+'월</span><button onclick="shM(1)">▶</button></div>';
+  if(!emps.length)return h+'<div class="ey">직원을 먼저 등록해주세요</div>';
+
+  // Calendar
+  var days=dim(S.month),firstDow=dow(S.month,1);
+  var td=todayStr(),curYM=S.month;
+  h+='<div class="cal"><div class="cal-hd"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>';
+  h+='<div class="cal-grid">';
+  for(var i=0;i<firstDow;i++)h+='<div class="cal-cell empty"></div>';
+  for(var d=1;d<=days;d++){
+    var dw=dow(S.month,d),isSun=dw===0,isSat=dw===6;
+    var isToday=td===curYM+"-"+d;
+    var isSel=S.selDay===d;
+    var colors=dayEmpColors(S.month,d);
+    var cls="cal-cell"+(isSun?" sun":"")+(isSat?" sat":"")+(isToday?" today":"")+(isSel?" sel":"");
+    h+='<div class="'+cls+'" onclick="selDay('+d+')">'+d;
+    if(colors.length>0){
+      h+='<div class="dots">';
+      colors.forEach(function(c){h+='<span style="background:'+c+'"></span>';});
+      h+='</div>';
+    }
+    h+='</div>';
+  }
+  h+='</div></div>';
+  // Employee color legend
+  h+='<div class="legend">';
+  emps.forEach(function(e,i){
+    var gi=e.gender==="female"?"👩":"👨";
+    h+='<span class="leg-item"><span class="leg-dot" style="background:'+empColor(i)+'"></span>'+gi+' '+esc(e.name)+'</span>';
+  });
+  h+='</div>';
+
+  // Day detail panel
+  if(S.selDay!==null){
+    var selDow=dow(S.month,S.selDay);
+    h+='<div class="dp"><div class="dp-title"><span>'+m+'/'+S.selDay+' ('+DN[selDow]+') 출퇴근 입력</span><button class="dp-close" onclick="selDay(null)">닫기</button></div>';
+    // Employee selection chips
+    h+='<div style="font-size:12px;color:var(--dim);margin-bottom:8px">근무한 직원을 선택하세요</div>';
+    h+='<div class="emp-chips">';
+    emps.forEach(function(e,idx){
+      var l=getLog(e.id,S.month,S.selDay);
+      var worked=isWorked(e.id,S.selDay);
+      var gi=e.gender==="female"?"👩":"👨";
+      var ec=empColor(idx);
+      h+='<button class="emp-chip'+(worked?" on":"")+'" style="'+(worked?'border-color:'+ec+';background:'+ec+'22;color:'+ec:'')+'" onclick="event.stopPropagation();tgWork(\''+e.id+'\')">'+gi+' '+esc(e.name)+(worked?' ✓':'')+'</button>';
+    });
+    h+='</div>';
+    // Time inputs only for selected (worked) employees
+    emps.forEach(function(e,idx){
+      if(!isWorked(e.id,S.selDay))return;
+      var l=getLog(e.id,S.month,S.selDay);
+      var dc=calcDay(l.start||"",l.end||"",e.breakMin||0);
+      var gi=e.gender==="female"?"👩":"👨";
+      var ec=empColor(idx);
+      h+='<div class="emp-row" onclick="event.stopPropagation()" style="border-left:4px solid '+ec+'"><div class="emp-row-hd"><span class="emp-row-nm">'+gi+' '+esc(e.name)+'</span>';
+      if(dc.total>0)h+='<span class="emp-row-hrs">'+dc.total.toFixed(1)+'h</span>';
+      h+='</div>';
+      h+='<div class="time-row">';
+      h+='<button class="time-disp'+(l.start?"":" emp-ty")+'" onclick="event.stopPropagation();openTP(\''+e.id+'\','+S.selDay+',\'start\')">'+(l.start?fmtTime(l.start):"출근시간")+'</button>';
+      h+='<span class="sep">~</span>';
+      h+='<button class="time-disp'+(l.end?"":" emp-ty")+'" onclick="event.stopPropagation();openTP(\''+e.id+'\','+S.selDay+',\'end\')">'+(l.end?fmtTime(l.end):"퇴근시간")+'</button>';
+      h+='<button class="time-del" onclick="event.stopPropagation();clearTime(\''+e.id+'\','+S.selDay+')" title="시간 삭제">✕</button>';
+      h+='</div>';
+      h+='<div style="display:flex;justify-content:space-between;align-items:center">';
+      h+='<label class="hol-chk"><input type="checkbox"'+(l.isHol?" checked":"")+' onclick="event.stopPropagation()" onchange="uL(\''+e.id+'\','+S.selDay+',\'isHol\',this.checked)">휴일근무</label>';
+      if(dc.total>0){
+        var info=[];
+        if(dc.night>0)info.push('🌙야간 '+dc.night.toFixed(1)+'h');
+        if(dc.ot>0)info.push('⏱연장 '+dc.ot.toFixed(1)+'h');
+        if(info.length)h+='<div class="sub-info"><span>'+info.join(' · ')+'</span></div>';
+      }
+      h+='</div></div>';
+    });
+    h+='</div>';
+  }
+
+  // Monthly summary per employee
+  h+='<div style="font-size:14px;font-weight:700;margin:16px 0 10px">📊 월간 급여 요약</div>';
+  var grandT=0;
+  emps.forEach(function(e){
+    var pay=calcMonthPay(e,S.month);
+    var ded=getDed(e.id,S.month);
+    var finalPay=Math.max(0,pay.total-ded.amount);
+    grandT+=finalPay;
+    var open=S.expSum===e.id,gi=e.gender==="female"?"👩":"👨";
+    var bds='';
+    if(pay.weekly>0)bds+='<span class="bg bgg">주휴</span>';
+    if(pay.night>0)bds+='<span class="bg bgo">야간</span>';
+    if(pay.ot>0)bds+='<span class="bg bga">연장</span>';
+    if(pay.hol>0)bds+='<span class="bg bgr">휴일</span>';
+    if(ded.amount>0)bds+='<span class="bg bgr">삭감</span>';
+    h+='<div class="sum-card" onclick="tgS(\''+e.id+'\')">';
+    h+='<div class="ch"><div><span class="en">'+gi+' '+esc(e.name)+'</span>'+bds+'</div>';
+    h+='<div style="text-align:right"><div style="font-size:16px;font-weight:700;color:var(--accent)">'+fm(finalPay)+'원</div>';
+    h+='<div style="font-size:11px;color:var(--dim)">'+(open?"접기 ▲":"상세 ▼")+'</div></div></div>';
+    if(open){
+      h+='<div class="det" onclick="event.stopPropagation()">';
+      pay.weeks.forEach(function(w){h+='<div class="ws'+(w.ok?" ok":"")+'">'+w.week+'주차: <b>'+w.hours+'h / '+w.days+'일</b>'+(w.ok?' ✓ 주휴 '+fm(w.pay)+'원':' (미충족)')+'</div>';});
+      var items=[["기본급",pay.base,1],["주휴수당",pay.weekly,pay.weekly>0],["야간수당",pay.night,pay.night>0],["연장수당",pay.ot,pay.ot>0],["휴일수당",pay.hol,pay.hol>0]];
+      items.forEach(function(it){if(it[2])h+='<div class="pr"><span class="pl">'+it[0]+'</span><span class="pv">'+fm(it[1])+'원</span></div>';});
+      h+='<div class="pr"><span class="pl">급여 합계</span><span class="pv">'+fm(pay.total)+'원</span></div>';
+      // 삭감 입력
+      h+='<div style="margin-top:12px;background:var(--rs);border-radius:10px;padding:12px">';
+      h+='<div style="font-size:12px;font-weight:600;color:var(--red);margin-bottom:8px">➖ 삭감</div>';
+      h+='<div class="rw"><div><label>삭감 금액</label><div class="iw" style="margin-bottom:8px"><input type="text" inputmode="numeric" value="'+(ded.amount?fmtComma(ded.amount):"")+'" placeholder="0" oninput="this.value=fmtComma(this.value)" onblur="setDedAmt(\''+e.id+'\',this.value)"><span class="sf">원</span></div></div></div>';
+      h+='<div><label>비고</label><div class="iw" style="margin-bottom:0"><input type="text" value="'+esc(ded.note||"")+'" placeholder="예: 지각 차감, 가불금" onblur="setDedNote(\''+e.id+'\',this.value)"></div></div>';
+      h+='</div>';
+      if(ded.amount>0){
+        h+='<div class="pr"><span class="pl" style="color:var(--red)">삭감'+(ded.note?' ('+esc(ded.note)+')':'')+'</span><span class="pv" style="color:var(--red)">-'+fm(ded.amount)+'원</span></div>';
+      }
+      h+='<div class="tr"><span class="tl">최종 지급액</span><span class="tv">'+fm(finalPay)+'원</span></div>';
+      h+='</div>';
+    }
+    h+='</div>';
+  });
+  h+='<div class="cd gt"><div class="tr"><span class="tl">전체 합계</span><span class="tv" style="font-size:22px">'+fm(grandT)+'원</span></div></div>';
+  h+='<button class="bt bt-g" style="margin-top:8px" onclick="svRec()">'+y+'년 '+m+'월 급여 기록 저장</button>';
+  return h;
+}
+
+function selDay(d){S.selDay=d;render();if(d!==null)setTimeout(function(){var dp=document.querySelector(".dp");if(dp)dp.scrollIntoView({behavior:"smooth",block:"start"})},50)}
+function isWorked(eid,day){
+  var l=getLog(eid,S.month,day);
+  return !!l.worked||!!(l.start&&l.end);
+}
+function tgWork(eid){
+  var l=getLog(eid,S.month,S.selDay);
+  if(isWorked(eid,S.selDay)){
+    // uncheck: remove this day's record
+    var k=eid+"_"+S.month;
+    if(S.logs[k]&&S.logs[k][S.selDay]){delete S.logs[k][S.selDay];sv();}
+  }else{
+    setLogEntry(eid,S.month,S.selDay,"worked",true);
+  }
+  render();
+}
+function uL(eid,day,key,val){
+  setLogEntry(eid,S.month,day,key,val);
+  if(key==="start"||key==="end"){
+    render();
+  }else{
+    render();
+  }
+}
+// ─── 커스텀 시간 선택기 ───
+var TP=null; // {eid,day,field,ampm,hour}
+function fmtTime(hhmm){
+  if(!hhmm)return"";
+  var p=hhmm.split(":");var h=+p[0],m=p[1];
+  var ap=h<12?"오전":"오후";
+  var h12=h%12;if(h12===0)h12=12;
+  return ap+" "+h12+":"+m;
+}
+function openTP(eid,day,field){
+  var l=getLog(eid,S.month,day);
+  var cur=field==="start"?(l.start||"07:00"):(l.end||"14:00");
+  var p=cur.split(":");var h24=+p[0];
+  TP={eid:eid,day:day,field:field,ampm:h24<12?"am":"pm",hour:h24%12===0?12:h24%12,min:p[1]};
+  renderTP();
+}
+function closeTP(){TP=null;var ov=document.getElementById("tpOv");if(ov)ov.remove()}
+function setTPampm(a){TP.ampm=a;renderTP()}
+function setTPhour(hr){TP.hour=hr;renderTP()}
+function setTPmin(mn){
+  // 분 선택 → 즉시 저장 & 닫기
+  var h24=TP.hour%12;if(TP.ampm==="pm")h24+=12;
+  var val=String(h24).padStart(2,"0")+":"+mn;
+  var eid=TP.eid,day=TP.day,field=TP.field;
+  closeTP();
+  uL(eid,day,field,val);
+}
+function clearTime(eid,day){
+  var k=eid+"_"+S.month;
+  if(S.logs[k]&&S.logs[k][day]){
+    delete S.logs[k][day].start;
+    delete S.logs[k][day].end;
+    sv();
+  }
+  render();
+}
+function renderTP(){
+  var ov=document.getElementById("tpOv");
+  if(!ov){ov=document.createElement("div");ov.id="tpOv";ov.className="tp-ov";ov.onclick=function(ev){if(ev.target===ov)closeTP()};document.body.appendChild(ov);}
+  var hrs="";for(var i=1;i<=12;i++)hrs+='<button class="tp-btn'+(TP.hour===i?" on":"")+'" onclick="setTPhour('+i+')">'+i+'</button>';
+  var mins="";["00","05","10","15","20","25","30","35","40","45","50","55"].forEach(function(mn){
+    mins+='<button class="tp-btn tp-min'+(TP.min===mn?" on":"")+'" onclick="setTPmin(\''+mn+'\')">'+mn+'</button>';
+  });
+  ov.innerHTML='<div class="tp-box">'
+    +'<div class="tp-title">'+(TP.field==="start"?"출근":"퇴근")+' 시간 선택</div>'
+    +'<div class="tp-ampm"><button class="tp-btn'+(TP.ampm==="am"?" on":"")+'" onclick="setTPampm(\'am\')">오전</button><button class="tp-btn'+(TP.ampm==="pm"?" on":"")+'" onclick="setTPampm(\'pm\')">오후</button></div>'
+    +'<div class="tp-lbl">시</div><div class="tp-grid">'+hrs+'</div>'
+    +'<div class="tp-lbl">분 (선택하면 완료)</div><div class="tp-grid">'+mins+'</div>'
+    +'<button class="tp-cancel" onclick="closeTP()">취소</button>'
+    +'</div>';
+}
+function tgS(id){S.expSum=S.expSum===id?null:id;render()}
+// ─── 삭감 ───
+function getDed(eid,mo){return S.deds[eid+"_"+mo]||{amount:0,note:""}}
+function setDedAmt(eid,val){
+  var k=eid+"_"+S.month;
+  if(!S.deds[k])S.deds[k]={amount:0,note:""};
+  S.deds[k].amount=Number(String(val).replace(/[^0-9]/g,""))||0;
+  sv();render();
+}
+function setDedNote(eid,val){
+  var k=eid+"_"+S.month;
+  if(!S.deds[k])S.deds[k]={amount:0,note:""};
+  S.deds[k].note=val.trim();
+  sv();
+}
+function shM(d){var ym=S.month.split("-").map(Number);var dt=new Date(ym[0],ym[1]-1+d,1);S.month=dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0");S.selDay=null;render()}
+
+function svRec(){
+  var emps=activeE();if(!emps.length)return;
+  var details=emps.map(function(e){
+    var pay=calcMonthPay(e,S.month);
+    var ded=getDed(e.id,S.month);
+    var finalPay=Math.max(0,pay.total-ded.amount);
+    return Object.assign({},e,{pay:pay,ded:ded,finalPay:finalPay});
+  });
+  var tot=details.reduce(function(s,d){return s+d.finalPay},0);
+  var rec={id:gid(),month:S.month,details:details,totalAll:tot,savedAt:new Date().toISOString()};
+  S.recs=[rec].concat(S.recs.filter(function(r){return r.month!==S.month}));
+  sv();S.tab=2;render();
+}
+
+// ═══ 기록보기 ═══
+function rRec(){
+  if(!S.recs.length)return'<div class="ey">저장된 기록이 없습니다<small>급여계산 탭에서 저장하세요</small></div>';
+  return S.recs.map(function(rec){
+    var ym=rec.month.split("-").map(Number),y=ym[0],m=ym[1];
+    var h='<div class="rc"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:16px;font-weight:700">'+y+'년 '+m+'월</span>';
+    h+='<div style="display:flex;gap:6px"><button class="bt bs ba" onclick="exXl(\''+rec.id+'\')">엑셀</button><button class="bt bs bd" onclick="dlRec(\''+rec.id+'\')">삭제</button></div></div>';
+    rec.details.forEach(function(d,di){
+      var gi=d.gender==="female"?"👩":"👨";
+      var key=rec.id+"_"+di;
+      var open=S.expRec===key;
+      var fp=(d.finalPay!==undefined)?d.finalPay:d.pay.total;
+      h+='<div style="cursor:pointer" onclick="tgRec(\''+key+'\')">';
+      h+='<div class="pr" style="padding:8px 0"><span style="font-size:14px">'+gi+' '+esc(d.name)+(d.ded&&d.ded.amount>0?' <span class="bg bgr">삭감</span>':'')+' <span style="font-size:11px;color:var(--dim)">'+(open?"▲":"▼")+'</span></span><span style="font-size:14px;font-weight:600">'+fm(fp)+'원</span></div>';
+      if(open){
+        var p=d.pay;
+        h+='<div style="background:var(--ibg);border-radius:10px;padding:10px 14px;margin:4px 0 8px">';
+        // 검증 계산식: 시간 합계 및 시급
+        var totH=0,nH=0,oH=0,holH=0,wageSet={};
+        if(p.details){p.details.forEach(function(dd){if(dd.total>0){
+          totH+=dd.total;nH+=dd.night;oH+=dd.ot;if(dd.isHol)holH+=dd.total;
+          wageSet[dd.wage||d.wage]=1;
+        }});}
+        var wages=Object.keys(wageSet);
+        var singleWage=wages.length===1?Number(wages[0]):null;
+        function fml(txt){return '<div style="font-size:11px;color:var(--dim);padding:0 0 4px">'+txt+'</div>'}
+        var items=[["기본급",p.base,1],["주휴수당",p.weekly,p.weekly>0],["야간수당",p.night,p.night>0],["연장수당",p.ot,p.ot>0],["휴일수당",p.hol,p.hol>0]];
+        items.forEach(function(it){
+          if(!it[2])return;
+          h+='<div class="pr" style="padding:5px 0;border-bottom:none"><span class="pl" style="font-size:13px">'+it[0]+'</span><span class="pv" style="font-size:13px">'+fm(it[1])+'원</span></div>';
+          // 계산식 표시
+          if(singleWage){
+            if(it[0]==="기본급")h+=fml('= '+totH.toFixed(1)+'h × '+fm(singleWage)+'원');
+            else if(it[0]==="야간수당")h+=fml('= '+nH.toFixed(1)+'h × '+fm(singleWage)+'원 × 50%');
+            else if(it[0]==="연장수당")h+=fml('= '+oH.toFixed(1)+'h × '+fm(singleWage)+'원 × 50%');
+            else if(it[0]==="휴일수당")h+=fml('= 휴일근무 '+holH.toFixed(1)+'h 가산분');
+            else if(it[0]==="주휴수당"&&p.weeks){
+              var wtxt=p.weeks.filter(function(w){return w.ok}).map(function(w){return w.week+'주('+w.hours+'h÷'+w.days+'일×시급)'}).join(' + ');
+              if(wtxt)h+=fml('= '+wtxt);
+            }
+          }else if(it[0]==="기본급"){
+            h+=fml('= 총 '+totH.toFixed(1)+'h (기간별 시급 적용: '+wages.map(function(w){return fm(+w)+'원'}).join(', ')+')');
+          }
+        });
+        if(d.ded&&d.ded.amount>0){
+          h+='<div class="pr" style="padding:5px 0"><span class="pl" style="font-size:13px;color:var(--red)">삭감'+(d.ded.note?' ('+esc(d.ded.note)+')':'')+'</span><span class="pv" style="font-size:13px;color:var(--red)">-'+fm(d.ded.amount)+'원</span></div>';
+          h+='<div class="pr" style="padding:5px 0"><span class="pl" style="font-size:13px;font-weight:700">최종 지급액</span><span class="pv" style="font-size:13px;font-weight:700">'+fm(fp)+'원</span></div>';
+        }
+        // work days summary
+        if(p.details){
+          var workDays=p.details.filter(function(dd){return dd.total>0});
+          if(workDays.length){
+            h+='<div style="font-size:12px;font-weight:600;color:var(--dim);margin-top:8px;margin-bottom:4px">출근 기록 ('+workDays.length+'일 · 총 '+totH.toFixed(1)+'h)</div>';
+            workDays.forEach(function(dd){
+              h+='<div style="font-size:12px;color:var(--dim);padding:2px 0">'+m+'/'+dd.day+'('+DN[dd.dow]+') '+fmtTime(dd.start)+'~'+fmtTime(dd.end)+' · '+dd.total.toFixed(1)+'h'+(dd.isHol?' <span style="color:var(--red)">휴일</span>':'')+'</div>';
+            });
+          }
+        }
+        h+='</div>';
+      }
+      h+='</div>';
+    });
+    h+='<div class="tr"><span class="tl">합계</span><span class="tv">'+fm(rec.totalAll)+'원</span></div>';
+    h+='<div style="font-size:11px;color:var(--dim);margin-top:8px;text-align:right">저장: '+new Date(rec.savedAt).toLocaleDateString("ko-KR")+'</div></div>';
+    return h;
+  }).join("");
+}
+function tgRec(key){S.expRec=S.expRec===key?null:key;render()}
+function dlRec(id){if(!confirm("삭제?"))return;S.recs=S.recs.filter(function(r){return r.id!==id});sv();render()}
+
+// ═══ 엑셀 ═══
+// 숫자 셀에 콤마 서식 적용
+function applyComma(ws){
+  var range=XLSX.utils.decode_range(ws["!ref"]);
+  for(var R=range.s.r;R<=range.e.r;R++){
+    for(var C=range.s.c;C<=range.e.c;C++){
+      var addr=XLSX.utils.encode_cell({r:R,c:C});
+      var cell=ws[addr];
+      if(cell&&cell.t==="n"&&cell.v>=1000)cell.z="#,##0";
+    }
+  }
+}
+function exXl(rid){
+  var rec=S.recs.find(function(r){return r.id===rid});if(!rec)return;
+  var ym=rec.month.split("-").map(Number),y=ym[0],m=ym[1];
+  var wb=XLSX.utils.book_new();
+  var sum=[[y+'년 '+m+'월 급여'],[],['이름','성별','연락처','시급','기본급','주휴','야간','연장','휴일','급여합계','삭감','비고','최종지급액']];
+  rec.details.forEach(function(d){
+    var dedAmt=(d.ded&&d.ded.amount)||0;
+    var dedNote=(d.ded&&d.ded.note)||"";
+    var fp=(d.finalPay!==undefined)?d.finalPay:d.pay.total;
+    sum.push([d.name,d.gender==="female"?"여":"남",d.phone||"",d.wage,Math.round(d.pay.base),Math.round(d.pay.weekly),Math.round(d.pay.night),Math.round(d.pay.ot),Math.round(d.pay.hol),Math.round(d.pay.total),dedAmt?-dedAmt:0,dedNote,Math.round(fp)]);
+  });
+  sum.push([],['','','','','','','','','','','','합계',Math.round(rec.totalAll)]);
+  var ws1=XLSX.utils.aoa_to_sheet(sum);ws1["!cols"]=[{wch:10},{wch:5},{wch:14},{wch:9},{wch:12},{wch:12},{wch:12},{wch:12},{wch:12},{wch:12},{wch:10},{wch:16},{wch:13}];
+  applyComma(ws1);
+  XLSX.utils.book_append_sheet(wb,ws1,"급여요약");
+  rec.details.forEach(function(d){if(d.pay.details){
+    var rows=[[d.name+' 출퇴근 ('+y+'.'+m+')'],[],['날짜','요일','출근','퇴근','근무(h)','야간','연장','휴일']];
+    d.pay.details.forEach(function(dd){if(dd.total>0)rows.push([m+'/'+dd.day,DN[dd.dow],dd.start,dd.end,+(dd.total.toFixed(1)),+(dd.night.toFixed(1)),+(dd.ot.toFixed(1)),dd.isHol?"O":""]);});
+    var ws=XLSX.utils.aoa_to_sheet(rows);ws["!cols"]=[{wch:7},{wch:5},{wch:7},{wch:7},{wch:8},{wch:7},{wch:7},{wch:6}];
+    XLSX.utils.book_append_sheet(wb,ws,d.name.replace(/[\\\/\?\*\[\]]/g,"").slice(0,28));
+  }});
+  XLSX.writeFile(wb,"급여_"+y+"년"+m+"월.xlsx");
+}
+function exAll(){
+  if(!S.recs.length)return alert("기록이 없습니다");
+  var wb=XLSX.utils.book_new();
+  S.recs.forEach(function(rec){var ym=rec.month.split("-").map(Number),y=ym[0],m=ym[1];
+    var rows=[[y+'년 '+m+'월'],[],['이름','기본급','주휴','야간','연장','휴일','급여합계','삭감','비고','최종지급액']];
+    rec.details.forEach(function(d){
+      var dedAmt=(d.ded&&d.ded.amount)||0;
+      var dedNote=(d.ded&&d.ded.note)||"";
+      var fp=(d.finalPay!==undefined)?d.finalPay:d.pay.total;
+      rows.push([d.name,Math.round(d.pay.base),Math.round(d.pay.weekly),Math.round(d.pay.night),Math.round(d.pay.ot),Math.round(d.pay.hol),Math.round(d.pay.total),dedAmt?-dedAmt:0,dedNote,Math.round(fp)]);
+    });
+    rows.push([],['','','','','','','','','합계',Math.round(rec.totalAll)]);
+    var ws=XLSX.utils.aoa_to_sheet(rows);applyComma(ws);ws["!cols"]=[{wch:10},{wch:12},{wch:12},{wch:12},{wch:12},{wch:12},{wch:12},{wch:10},{wch:16},{wch:13}];XLSX.utils.book_append_sheet(wb,ws,y+"년"+m+"월");});
+  XLSX.writeFile(wb,"급여_전체.xlsx");
+}
+
+// ═══ 설정 ═══
+function rSet(){
+  return'<div class="ss"><h3>데이터 백업 / 복원</h3><div class="sbb"><button class="bt" onclick="bk()">📦 백업 (JSON)</button><button class="bt bt-o" onclick="document.getElementById(\'rfi\').click()">📂 복원 (JSON)</button></div></div>'
+  +'<div class="ss" style="margin-top:20px"><h3>엑셀</h3><div class="sbb"><button class="bt bt-g" onclick="exAll()">📊 전체 엑셀 다운로드</button></div></div>'
+  +'<div class="ss" style="margin-top:20px"><h3>초기화</h3><div class="sbb"><button class="bt" style="background:var(--red)" onclick="rst()">🗑️ 모든 데이터 삭제</button></div></div>'
+  +'<div class="cd" style="margin-top:20px;font-size:13px;color:var(--dim);line-height:1.8"><strong style="color:var(--text)">사용 안내</strong><br>'
+  +'· 달력에서 날짜를 눌러 출퇴근 시간을 입력하세요<br>'
+  +'· 야간(22:00~06:00) 시급 50% 가산<br>'
+  +'· 연장(1일 8시간 초과) 시급 50% 가산<br>'
+  +'· 휴일 체크 시 휴일수당 자동 적용<br>'
+  +'· 주 15시간+1일 이상 → 주휴수당 자동<br>'
+  +'· 퇴사자는 급여계산에서 자동 제외<br>'
+  +'· 캐시 삭제 전에 꼭 백업하세요</div>';
+}
+function bk(){var d={emps:S.emps,recs:S.recs,logs:S.logs,deds:S.deds,at:new Date().toISOString()};var b=new Blob([JSON.stringify(d,null,2)],{type:"application/json"});var u=URL.createObjectURL(b);var a=document.createElement("a");a.href=u;a.download="급여백업_"+new Date().toISOString().slice(0,10)+".json";a.click();URL.revokeObjectURL(u)}
+document.getElementById("rfi").addEventListener("change",function(e){var f=e.target.files[0];if(!f)return;if(!confirm("덮어씌워집니다. 계속?")){this.value="";return}var r=new FileReader(),self=this;r.onload=function(ev){try{var d=JSON.parse(ev.target.result);if(d.emps){S.emps=d.emps;S.recs=d.recs||[];S.logs=d.logs||{};S.deds=d.deds||{};migrate();sv();render();alert("복원 완료!");}else alert("올바른 파일이 아닙니다.");}catch(err){alert("읽을 수 없습니다.")}};r.readAsText(f);self.value=""});
+function rst(){if(!confirm("모든 데이터를 삭제하시겠습니까?"))return;if(!confirm("마지막 확인입니다."))return;S.emps=[];S.recs=[];S.logs={};S.deds={};sv();render()}
+
+load();
+// PWA 서비스 워커 등록 (오프라인 지원)
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js").catch(function(){});
+}
+(function(){var y=new Date().getFullYear();var fn=document.getElementById("footerNote");if(fn)fn.textContent=y+" 최저시급 "+getMinWage().toLocaleString("ko-KR")+"원 · 야간(22~06시) 50% · 연장(8h초과) 50%";})();
+render();
+</script>
+</body>
+</html>
