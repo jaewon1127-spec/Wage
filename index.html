@@ -101,6 +101,51 @@ input[type=file]{display:none}
 .tp-btn:active{transform:scale(.94)}
 .tp-cancel{width:100%;padding:14px;font-size:15px;font-weight:700;background:var(--rs);color:var(--red);border:none;border-radius:10px;cursor:pointer;font-family:inherit;min-height:48px}
 
+/* 사용설명서 모달 */
+.man-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;display:none;align-items:flex-start;justify-content:center;overflow-y:auto;padding:0}
+.man-ov.show{display:flex}
+.man-box{background:var(--bg);width:100%;max-width:680px;min-height:100vh;padding:0 18px 60px;animation:slideUp .3s ease-out}
+@keyframes slideUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.man-top{position:sticky;top:0;background:var(--bg);padding:12px 0;border-bottom:2px dashed var(--border);margin-bottom:20px;display:flex;justify-content:space-between;align-items:center;z-index:10}
+.man-top h1{font-size:20px;font-weight:800;color:var(--text)}
+.man-close{background:var(--rs);color:var(--red);border:none;border-radius:10px;padding:10px 16px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;min-height:42px}
+.man-sec{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.man-sec h2{font-size:19px;font-weight:800;color:var(--text);margin-bottom:8px;padding-bottom:10px;border-bottom:3px solid var(--accent);display:flex;align-items:center;gap:8px}
+.man-sec h2 .ic{font-size:24px}
+.man-sec h3{font-size:16px;font-weight:700;color:var(--text);margin:16px 0 8px;padding-left:10px;border-left:4px solid var(--accent)}
+.man-sec p{font-size:14px;color:var(--text);margin-bottom:8px;line-height:1.7}
+.steps{background:var(--ibg);border-radius:10px;padding:14px 16px;margin:10px 0}
+.steps .step{display:flex;gap:10px;padding:8px 0;align-items:flex-start}
+.steps .step:not(:last-child){border-bottom:1px dashed var(--border)}
+.steps .step .n{background:var(--accent);color:#fff;min-width:26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;margin-top:1px}
+.steps .step .t{font-size:14px;line-height:1.6;flex:1}
+.steps .step .t b{color:var(--accent);font-weight:700}
+.man-tip{background:var(--yellow,#fef9e7);border:1px solid #f5e6a8;border-radius:10px;padding:12px 14px;margin:12px 0;font-size:13px;color:#7c5f0f;line-height:1.6}
+.man-tip b{color:#5c4509}
+.man-warn{background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:12px 14px;margin:12px 0;font-size:13px;color:#991b1b;line-height:1.6}
+.man-warn b{color:#7f1d1d}
+.man-info{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 14px;margin:12px 0;font-size:13px;color:#1e40af;line-height:1.6}
+.checks{margin:10px 0;padding-left:0;list-style:none}
+.checks li{padding:6px 0;font-size:14px;display:flex;align-items:flex-start;gap:8px;line-height:1.6}
+.checks li::before{content:"✓";color:var(--green);font-weight:800;font-size:16px;flex-shrink:0}
+.man-tbl{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px;background:#fff;border-radius:8px;overflow:hidden}
+.man-tbl th{background:var(--accent);color:#fff;padding:9px 11px;text-align:left;font-weight:700}
+.man-tbl td{padding:9px 11px;border-bottom:1px solid var(--border);vertical-align:top}
+.man-tbl tr:last-child td{border-bottom:none}
+.man-tbl td:first-child{font-weight:700;color:var(--accent);white-space:nowrap}
+.faq{background:var(--ibg);border-left:4px solid var(--orange);padding:12px 16px;border-radius:0 10px 10px 0;margin:12px 0}
+.faq .q{font-size:14px;font-weight:700;color:var(--text);margin-bottom:5px}
+.faq .q::before{content:"❓ "}
+.faq .a{font-size:13px;color:var(--dim);line-height:1.7}
+.faq .a::before{content:"💡 "}
+.toc-box{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:20px}
+.toc-box h2{font-size:16px;font-weight:700;margin-bottom:10px;color:var(--accent)}
+.toc-box ol{list-style:none;padding:0}
+.toc-box li{padding:6px 0;border-bottom:1px dashed var(--border);font-size:14px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.toc-box li:last-child{border-bottom:none}
+.toc-box li:active{opacity:.6}
+.toc-box li .num{background:var(--accent);color:#fff;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+
 /* Day detail panel */
 .dp{background:var(--card);border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid var(--accent)}
 .dp-title{font-size:16px;font-weight:700;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
@@ -133,6 +178,203 @@ input[type=file]{display:none}
 <div id="content"></div>
 <div class="ft" id="footerNote">최저시급 · 야간(22~06시) 50% · 연장(8h초과) 50%</div>
 <input type="file" id="rfi" accept=".wagebak,.json">
+
+<!-- 사용설명서 모달 -->
+<div class="man-ov" id="manualOv">
+  <div class="man-box">
+    <div class="man-top">
+      <h1>📖 사용설명서</h1>
+      <button class="man-close" onclick="closeManual()">닫기 ✕</button>
+    </div>
+
+    <div class="toc-box">
+      <h2>📑 목차</h2>
+      <ol>
+        <li onclick="jumpTo('s1')"><span class="num">1</span>앱 설치하기</li>
+        <li onclick="jumpTo('s2')"><span class="num">2</span>직원 등록하기</li>
+        <li onclick="jumpTo('s3')"><span class="num">3</span>출퇴근 시간 입력하기</li>
+        <li onclick="jumpTo('s4')"><span class="num">4</span>급여 확인 및 저장하기</li>
+        <li onclick="jumpTo('s5')"><span class="num">5</span>저장된 기록 보기</li>
+        <li onclick="jumpTo('s6')"><span class="num">6</span>데이터 백업 (꼭 하세요!)</li>
+        <li onclick="jumpTo('s7')"><span class="num">7</span>자주 묻는 질문</li>
+      </ol>
+    </div>
+
+    <div class="man-sec" id="s1">
+      <h2><span class="ic">📱</span> 1. 앱 설치하기</h2>
+      <p>한 번 설치하면 홈 화면에서 바로 사용할 수 있습니다. 인터넷이 없어도 작동합니다.</p>
+      <h3>📱 아이폰 (아이패드도 같음)</h3>
+      <div class="steps">
+        <div class="step"><span class="n">1</span><span class="t"><b>사파리</b> 앱을 엽니다. (크롬이 아닌 <b>꼭 사파리</b>여야 합니다)</span></div>
+        <div class="step"><span class="n">2</span><span class="t">앱 주소를 주소창에 입력합니다.</span></div>
+        <div class="step"><span class="n">3</span><span class="t">화면 <b>아래 가운데 공유 버튼</b> (네모 안에 위쪽 화살표)을 누릅니다.</span></div>
+        <div class="step"><span class="n">4</span><span class="t">메뉴를 아래로 내려서 <b>"홈 화면에 추가"</b>를 누릅니다.</span></div>
+        <div class="step"><span class="n">5</span><span class="t">오른쪽 위 <b>"추가"</b>를 누르면 끝!</span></div>
+      </div>
+      <h3>📱 안드로이드</h3>
+      <div class="steps">
+        <div class="step"><span class="n">1</span><span class="t"><b>크롬</b> 앱을 엽니다.</span></div>
+        <div class="step"><span class="n">2</span><span class="t">앱 주소를 주소창에 입력합니다.</span></div>
+        <div class="step"><span class="n">3</span><span class="t">오른쪽 위 <b>점 3개(⋮)</b> 메뉴를 누릅니다.</span></div>
+        <div class="step"><span class="n">4</span><span class="t"><b>"앱 설치"</b> 또는 <b>"홈 화면에 추가"</b>를 누릅니다.</span></div>
+        <div class="step"><span class="n">5</span><span class="t"><b>"설치"</b> 버튼을 누르면 끝!</span></div>
+      </div>
+      <div class="man-tip"><b>💡 팁</b><br>설치하면 다른 앱처럼 홈 화면에 ₩ 모양 아이콘이 생깁니다. 누르면 바로 앱이 열립니다.</div>
+    </div>
+
+    <div class="man-sec" id="s2">
+      <h2><span class="ic">👥</span> 2. 직원 등록하기</h2>
+      <p>처음 사용할 때는 먼저 직원 정보를 등록해야 합니다.</p>
+      <h3>새 직원 추가하기</h3>
+      <div class="steps">
+        <div class="step"><span class="n">1</span><span class="t">위쪽 메뉴에서 <b>"직원관리"</b>를 누릅니다.</span></div>
+        <div class="step"><span class="n">2</span><span class="t"><b>"+ 새 직원 등록"</b> 버튼을 누릅니다.</span></div>
+        <div class="step"><span class="n">3</span><span class="t">아래 정보를 채워 넣습니다.</span></div>
+        <div class="step"><span class="n">4</span><span class="t">맨 아래 <b>"등록하기"</b> 버튼을 누르면 완료!</span></div>
+      </div>
+      <h3>입력하는 정보들</h3>
+      <ul class="checks">
+        <li><b>이름</b> · 직원이나 알바생의 이름</li>
+        <li><b>성별</b> · 남 또는 여 (버튼 누르면 됨)</li>
+        <li><b>연락처</b> · 전화번호 (숫자만 누르면 자동으로 하이픈 들어감)</li>
+        <li><b>입사일</b> · 일하기 시작한 날 (오늘 날짜가 자동 입력됨)</li>
+        <li><b>퇴사일</b> · 그만둔 날 (지금 일하는 중이면 비워두세요)</li>
+        <li><b>시급</b> · 한 시간당 받는 돈 (올해 최저시급이 기본값)</li>
+        <li><b>휴게시간</b> · 쉬는 시간 (분 단위, 시급에서 빼서 계산됨)</li>
+        <li><b>주소, 메모</b> · 안 적어도 됩니다</li>
+      </ul>
+      <h3>퇴사하면 어떻게 하나요?</h3>
+      <p>직원 카드의 <b>"퇴사"</b> 버튼을 누르면 됩니다. 자동으로 오늘 날짜로 퇴사 처리되고, 다음 달부터 급여 계산에서 빠집니다.</p>
+      <div class="man-tip"><b>💡 다시 일하러 오면?</b><br>위쪽 필터에서 <b>"퇴사"</b>를 누르면 퇴사한 직원 목록이 나옵니다. <b>"복직"</b> 버튼을 누르면 다시 재직 상태로 돌아옵니다.</div>
+      <h3>⚠️ 시급이 올랐을 때 (매우 중요!)</h3>
+      <p>최저시급이 올라서 시급을 바꿔야 할 때는 <b>주의</b>가 필요합니다.</p>
+      <div class="steps">
+        <div class="step"><span class="n">1</span><span class="t">직원 카드의 <b>"수정"</b> 버튼을 누릅니다.</span></div>
+        <div class="step"><span class="n">2</span><span class="t">시급 칸에 새 시급을 입력합니다.</span></div>
+        <div class="step"><span class="n">3</span><span class="t"><b>"시급 적용 시작일"</b>을 새 시급을 적용할 첫 날짜로 설정합니다.</span></div>
+        <div class="step"><span class="n">4</span><span class="t"><b>"수정 완료"</b> 버튼을 누릅니다.</span></div>
+      </div>
+      <div class="man-warn"><b>⚠️ 주의!</b><br>"시급 적용 시작일"을 꼭 확인하세요. 이 날짜 <b>이전</b>의 급여는 옛 시급으로, <b>이후</b>의 급여는 새 시급으로 계산됩니다.<br>예: 5월 1일부터 시급 인상 → 시작일을 <b>2026-05-01</b>로 설정 → 4월 급여는 그대로 유지됩니다.</div>
+    </div>
+
+    <div class="man-sec" id="s3">
+      <h2><span class="ic">📅</span> 3. 출퇴근 시간 입력하기</h2>
+      <p>달력에서 일한 날을 누르고, 출근/퇴근 시간을 입력하면 자동으로 급여가 계산됩니다.</p>
+      <h3>기본 사용 순서</h3>
+      <div class="steps">
+        <div class="step"><span class="n">1</span><span class="t">위쪽 메뉴에서 <b>"급여계산"</b>을 누릅니다.</span></div>
+        <div class="step"><span class="n">2</span><span class="t">달력에서 일한 <b>날짜를 누릅니다</b>.</span></div>
+        <div class="step"><span class="n">3</span><span class="t">아래에 직원 이름 버튼들이 나오면, <b>그날 일한 사람만 눌러서 체크</b>합니다.</span></div>
+        <div class="step"><span class="n">4</span><span class="t">체크한 직원 아래에 시간 입력 칸이 나타납니다. <b>출근시간</b>을 누릅니다.</span></div>
+        <div class="step"><span class="n">5</span><span class="t"><b>오전/오후 → 시 → 분</b> 순서로 누르면 자동으로 저장되고 창이 닫힙니다.</span></div>
+        <div class="step"><span class="n">6</span><span class="t"><b>퇴근시간</b>도 같은 방법으로 입력합니다.</span></div>
+      </div>
+      <div class="man-tip"><b>💡 시간을 잘못 입력했을 때</b><br>시간 칸 오른쪽의 <b>✕ 버튼</b>을 누르면 그날 시간이 지워집니다. 다시 입력하면 됩니다.</div>
+      <h3>달력의 색깔은 뭔가요?</h3>
+      <p>각 직원마다 고유한 색깔이 자동으로 정해집니다. 달력 날짜 아래에 색깔 점이 보이면 그 색깔의 직원이 그날 일한 것입니다. 달력 바로 아래에 누가 무슨 색인지 표시되어 있어요.</p>
+      <h3>자동으로 계산되는 수당</h3>
+      <table class="man-tbl">
+        <tr><th>수당 종류</th><th>언제 받나요?</th></tr>
+        <tr><td>주휴수당</td><td>한 주 15시간 이상 + 1일 이상 근무 시 자동 발생</td></tr>
+        <tr><td>야간수당</td><td>밤 10시~새벽 6시 사이 일하면 시급의 50% 추가</td></tr>
+        <tr><td>연장수당</td><td>하루 8시간 초과 시 초과분에 50% 추가</td></tr>
+        <tr><td>휴일수당</td><td>"휴일근무"에 체크하면 휴일 가산 적용</td></tr>
+      </table>
+      <h3>휴일에 일한 경우</h3>
+      <p>시간 입력 아래에 <b>"휴일근무"</b> 체크 상자가 있습니다. 공휴일에 출근한 경우 이 칸을 체크해주세요.</p>
+    </div>
+
+    <div class="man-sec" id="s4">
+      <h2><span class="ic">💵</span> 4. 급여 확인 및 저장하기</h2>
+      <h3>월간 급여 보기</h3>
+      <p>달력 아래로 내리면 <b>"📊 월간 급여 요약"</b>이 나옵니다. 직원 이름을 누르면 주차별 근무시간, 각 수당 금액, 삭감 입력란이 펼쳐집니다.</p>
+      <h3>지각이나 결근으로 깎아야 할 때</h3>
+      <div class="steps">
+        <div class="step"><span class="n">1</span><span class="t">월간 급여 요약에서 직원 이름을 눌러 <b>펼칩니다</b>.</span></div>
+        <div class="step"><span class="n">2</span><span class="t">아래쪽 빨간색 <b>"➖ 삭감"</b> 영역을 찾습니다.</span></div>
+        <div class="step"><span class="n">3</span><span class="t"><b>삭감 금액</b>과 <b>비고</b>(이유)를 적습니다.</span></div>
+        <div class="step"><span class="n">4</span><span class="t">화면을 톡 한 번 누르면 자동 저장됩니다.</span></div>
+      </div>
+      <h3>이번 달 급여 기록 저장하기</h3>
+      <p>맨 아래 <b>녹색 "○○년 ○월 급여 기록 저장"</b> 버튼을 누르면 됩니다.</p>
+      <div class="man-info">같은 달을 다시 저장하면 이전 기록이 자동으로 업데이트됩니다.</div>
+    </div>
+
+    <div class="man-sec" id="s5">
+      <h2><span class="ic">📋</span> 5. 저장된 기록 보기</h2>
+      <p>위쪽 메뉴 <b>"기록보기"</b>를 누르면 저장된 월별 급여 기록을 볼 수 있습니다.</p>
+      <h3>직원별 상세 내역</h3>
+      <p>직원 이름을 누르면 다음 내용이 펼쳐집니다:</p>
+      <ul class="checks">
+        <li><b>각 수당의 금액과 계산식</b> (예: 92h × 10,320원)</li>
+        <li><b>삭감 내역</b> (있는 경우)</li>
+        <li><b>출근한 날짜 전체</b> (몇 시부터 몇 시까지)</li>
+      </ul>
+      <div class="man-tip"><b>💡 알바생이 "왜 이만큼이에요?"라고 물어볼 때</b><br>이 화면을 그대로 보여주면 어떻게 계산되었는지 설명할 수 있습니다.</div>
+      <h3>엑셀로 저장하기</h3>
+      <p>각 월의 <b>"엑셀"</b> 버튼을 누르면 다운로드됩니다. 전체 기간은 <b>설정 → 전체 엑셀 다운로드</b>를 누르세요.</p>
+    </div>
+
+    <div class="man-sec" id="s6">
+      <h2><span class="ic">🔐</span> 6. 데이터 백업 (꼭 하세요!)</h2>
+      <div class="man-warn"><b>⚠️ 매우 중요</b><br>모든 데이터는 사용 중인 휴대폰에 저장됩니다. 휴대폰을 바꾸거나 브라우저 데이터를 삭제하면 모든 정보가 <b>사라집니다</b>. 정기적인 백업이 매우 중요합니다.</div>
+      <h3>백업하는 방법</h3>
+      <div class="steps">
+        <div class="step"><span class="n">1</span><span class="t">위쪽 메뉴 <b>"설정"</b>을 누릅니다.</span></div>
+        <div class="step"><span class="n">2</span><span class="t"><b>"데이터 백업하기"</b> 버튼을 누릅니다.</span></div>
+        <div class="step"><span class="n">3</span><span class="t"><b>비밀번호를 두 번 입력</b>합니다. (4자 이상)</span></div>
+        <div class="step"><span class="n">4</span><span class="t">백업 파일이 다운로드됩니다.</span></div>
+        <div class="step"><span class="n">5</span><span class="t">받은 파일을 <b>카카오톡 "나에게 보내기"</b> 또는 이메일로 보내서 보관합니다.</span></div>
+      </div>
+      <div class="man-warn"><b>🔑 비밀번호를 절대 잊으면 안 됩니다!</b><br>백업 파일은 강력하게 암호화되어 있어서 비밀번호를 잊으면 <b>아무도</b> 복원할 수 없습니다. 종이에 적어 안전한 곳에 보관하세요.</div>
+      <h3>복원하는 방법</h3>
+      <div class="steps">
+        <div class="step"><span class="n">1</span><span class="t"><b>"설정"</b> 탭에서 <b>"백업 파일에서 복원하기"</b>를 누릅니다.</span></div>
+        <div class="step"><span class="n">2</span><span class="t">백업 파일을 선택합니다.</span></div>
+        <div class="step"><span class="n">3</span><span class="t">백업할 때 사용한 <b>비밀번호를 입력</b>합니다.</span></div>
+        <div class="step"><span class="n">4</span><span class="t">확인 메시지에서 "확인"을 누르면 끝!</span></div>
+      </div>
+      <div class="man-tip"><b>💡 백업은 언제 하면 좋을까요?</b><br>한 달에 한 번, 또는 급여 기록을 저장한 직후에 하시는 것을 추천합니다.</div>
+    </div>
+
+    <div class="man-sec" id="s7">
+      <h2><span class="ic">❓</span> 7. 자주 묻는 질문</h2>
+      <div class="faq">
+        <div class="q">분을 선택했는데 시간이 적용되지 않아요</div>
+        <div class="a">분까지 누르면 자동으로 저장되고 창이 닫힙니다. 잘못되면 ✕ 버튼으로 지우고 다시 입력하세요.</div>
+      </div>
+      <div class="faq">
+        <div class="q">시급을 바꿨는데 옛날 급여까지 바뀌었어요</div>
+        <div class="a">직원 수정 시 <b>"시급 적용 시작일"</b>을 인상한 날짜로 꼭 설정해야 합니다. 그 전 날짜는 옛 시급으로 유지됩니다.</div>
+      </div>
+      <div class="faq">
+        <div class="q">다른 직원 휴대폰에도 설치할 수 있나요?</div>
+        <div class="a">네, 같은 주소로 접속하면 설치 가능합니다. 단 데이터는 공유되지 않습니다.</div>
+      </div>
+      <div class="faq">
+        <div class="q">매년 최저시급이 바뀌면?</div>
+        <div class="a">새 직원 등록 시 자동으로 새 최저시급이 기본값으로 들어옵니다. 기존 직원은 직원 수정에서 시급 변경 + 시작일 1월 1일로 지정하세요.</div>
+      </div>
+      <div class="faq">
+        <div class="q">인터넷이 안 되면 사용할 수 없나요?</div>
+        <div class="a">한 번 설치한 후에는 <b>인터넷 없이도 사용 가능</b>합니다.</div>
+      </div>
+      <div class="faq">
+        <div class="q">데이터가 다른 사람에게 보이지 않나요?</div>
+        <div class="a">모든 데이터는 본인 휴대폰 안에만 저장됩니다. 백업 파일은 비밀번호로 암호화되어 누구도 열 수 없습니다.</div>
+      </div>
+      <div class="faq">
+        <div class="q">퇴직금도 계산해주나요?</div>
+        <div class="a">현재는 미지원입니다. 곧 추가 예정 (조건: 주 15시간 이상 + 1년 이상 근속).</div>
+      </div>
+      <div class="faq">
+        <div class="q">앱이 업데이트되면 어떻게 받나요?</div>
+        <div class="a">앱을 한 번 닫았다가 다시 켜면 자동으로 최신 버전이 적용됩니다. 데이터는 그대로 유지됩니다.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 var SK="wage-v6",TABS=["직원관리","급여계산","기록보기","설정"],DN=["일","월","화","수","목","금","토"];
@@ -719,17 +961,19 @@ function exAll(){
 
 // ═══ 설정 ═══
 function rSet(){
-  return'<div class="ss"><h3>📦 데이터 백업 / 복원 (암호화)</h3><div class="sbb"><button class="bt" onclick="bk()">데이터 백업하기</button><button class="bt bt-o" onclick="restoreClick()">백업 파일에서 복원하기</button></div><div style="font-size:13px;color:var(--dim);margin-top:8px;line-height:1.5">백업 파일은 비밀번호로 암호화됩니다. 같은 비밀번호로만 복원할 수 있으니 꼭 기억하세요.</div></div>'
-  +'<div class="ss" style="margin-top:20px"><h3>엑셀</h3><div class="sbb"><button class="bt bt-g" onclick="exAll()">📊 전체 엑셀 다운로드</button></div></div>'
-  +'<div class="ss" style="margin-top:20px"><h3>초기화</h3><div class="sbb"><button class="bt" style="background:var(--red)" onclick="rst()">🗑️ 모든 데이터 삭제</button></div></div>'
-  +'<div class="cd" style="margin-top:20px;font-size:13px;color:var(--dim);line-height:1.8"><strong style="color:var(--text)">사용 안내</strong><br>'
+  return'<div class="ss"><h3>📖 도움말</h3><div class="sbb"><button class="bt" style="background:var(--purple)" onclick="openManual()">사용설명서 보기</button></div></div>'
+  +'<div class="ss" style="margin-top:20px"><h3>🔐 데이터 백업 / 복원 (암호화)</h3><div class="sbb"><button class="bt" onclick="bk()">데이터 백업하기</button><button class="bt bt-o" onclick="restoreClick()">백업 파일에서 복원하기</button></div><div style="font-size:13px;color:var(--dim);margin-top:8px;line-height:1.5">백업 파일은 비밀번호로 암호화됩니다. 같은 비밀번호로만 복원할 수 있으니 꼭 기억하세요.</div></div>'
+  +'<div class="ss" style="margin-top:20px"><h3>📊 엑셀</h3><div class="sbb"><button class="bt bt-g" onclick="exAll()">전체 엑셀 다운로드</button></div></div>'
+  +'<div class="ss" style="margin-top:20px"><h3>⚠️ 초기화</h3><div class="sbb"><button class="bt" style="background:var(--red)" onclick="rst()">모든 데이터 삭제</button></div></div>'
+  +'<div class="cd" style="margin-top:20px;font-size:13px;color:var(--dim);line-height:1.8"><strong style="color:var(--text)">간단 안내</strong><br>'
   +'· 달력에서 날짜를 눌러 출퇴근 시간을 입력하세요<br>'
   +'· 야간(22:00~06:00) 시급 50% 가산<br>'
   +'· 연장(1일 8시간 초과) 시급 50% 가산<br>'
   +'· 휴일 체크 시 휴일수당 자동 적용<br>'
   +'· 주 15시간+1일 이상 → 주휴수당 자동<br>'
   +'· 퇴사자는 급여계산에서 자동 제외<br>'
-  +'· 캐시 삭제 전에 꼭 백업하세요</div>';
+  +'· 캐시 삭제 전에 꼭 백업하세요<br><br>'
+  +'<strong style="color:var(--text)">자세한 사용법은 위의 "사용설명서 보기"를 누르세요</strong></div>';
 }
 // ─── 백업 암호화 (AES-256-GCM, Web Crypto API) ───
 async function deriveKey(password,salt){
@@ -789,6 +1033,9 @@ function bk(){
 function restoreClick(){document.getElementById("rfi").click()}
 document.getElementById("rfi").addEventListener("change",function(e){var f=e.target.files[0];if(!f)return;var self=this;var pw=prompt("백업 파일의 비밀번호를 입력하세요");if(!pw){self.value="";return}var r=new FileReader();r.onload=function(ev){try{var raw=ev.target.result;if(typeof raw==="string"){try{var d=JSON.parse(raw);if(d.emps){if(!confirm("암호화되지 않은 구 버전 백업입니다. 복원하시겠습니까?\n\n현재 데이터가 덮어씌워집니다.")){self.value="";return}S.emps=d.emps;S.recs=d.recs||[];S.logs=d.logs||{};S.deds=d.deds||{};migrate();sv();render();alert("복원 완료되었습니다.");self.value="";return;}}catch(je){}}var buf=new Uint8Array(raw);decryptData(buf,pw).then(function(txt){var d=JSON.parse(txt);if(!d.emps)throw new Error("올바른 데이터가 아닙니다.");if(!confirm("복원하시겠습니까?\n현재 데이터가 덮어씌워집니다.")){self.value="";return}S.emps=d.emps;S.recs=d.recs||[];S.logs=d.logs||{};S.deds=d.deds||{};migrate();sv();render();alert("복원 완료되었습니다.");self.value="";}).catch(function(err){alert("복원 실패\n\n비밀번호가 틀렸거나 파일이 손상되었습니다.");self.value="";});}catch(err){alert("파일을 읽을 수 없습니다.");self.value="";}};r.onerror=function(){alert("파일 읽기 오류");self.value="";};if(f.name.endsWith(".json")){r.readAsText(f);}else{r.readAsArrayBuffer(f);}});
 function rst(){if(!confirm("모든 데이터를 삭제하시겠습니까?"))return;if(!confirm("마지막 확인입니다."))return;S.emps=[];S.recs=[];S.logs={};S.deds={};sv();render()}
+function openManual(){document.getElementById("manualOv").classList.add("show");document.body.style.overflow="hidden";window.scrollTo(0,0)}
+function closeManual(){document.getElementById("manualOv").classList.remove("show");document.body.style.overflow=""}
+function jumpTo(id){var el=document.getElementById(id);if(el)el.scrollIntoView({behavior:"smooth",block:"start"})}
 
 load();
 (function(){var y=new Date().getFullYear();var fn=document.getElementById("footerNote");if(fn)fn.textContent=y+" 최저시급 "+getMinWage().toLocaleString("ko-KR")+"원 · 야간(22~06시) 50% · 연장(8h초과) 50%";})();
