@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- v3: AI 자동입력(사진/텍스트) + 시급 검증 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -170,6 +171,23 @@ input[type=file]{display:none}
 .sum-card .det{margin-top:12px;border-top:1px solid var(--border);padding-top:12px}
 .ws{background:var(--as);border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:12px;color:var(--accent)}
 .ws.ok{background:var(--gs);color:var(--green)}
+
+/* 자동입력 (사진/텍스트) */
+.auto-cd{background:linear-gradient(135deg,#eef3ff,#fff);border:1.5px solid var(--accent);border-radius:14px;padding:16px;margin-bottom:12px}
+.auto-cd h4{font-size:16px;font-weight:700;margin-bottom:6px}
+.auto-cd p{font-size:13px;color:var(--dim);margin-bottom:10px;line-height:1.5}
+.auto-cd textarea{width:100%;min-height:88px;padding:12px;font-size:16px;background:#fff;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;color:var(--text);outline:none;resize:vertical}
+.auto-cd textarea:focus{border-color:var(--accent)}
+.auto-cd .br{margin-top:10px}
+.auto-cd .bt:disabled{opacity:.6}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:sp 1s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* 시급 검증 */
+.wchk{border-radius:10px;padding:10px 12px;margin:-4px 0 14px;font-size:13px;line-height:1.6}
+.wchk.ok{background:var(--gs);color:var(--green)}
+.wchk.bad{background:var(--rs);color:var(--red)}
+.iw input.warn{border-color:var(--orange);background:var(--os)}
 </style>
 </head>
 <body>
@@ -178,6 +196,7 @@ input[type=file]{display:none}
 <div id="content"></div>
 <div class="ft" id="footerNote">최저시급 · 야간(22~06시) 50% · 연장(8h초과) 50%</div>
 <input type="file" id="rfi" accept=".wagebak,.json">
+<input type="file" id="pfi" accept="image/*">
 
 <!-- 사용설명서 모달 -->
 <div class="man-ov" id="manualOv">
@@ -397,7 +416,9 @@ function fmtPhone(v){
 }
 var EMP_COLORS=["#6c8cff","#34d399","#fb923c","#f87171","#a78bfa","#f472b6","#38bdf8","#fbbf24","#4ade80","#e879f9","#22d3ee","#ef4444","#84cc16","#c084fc"];
 function empColor(idx){return EMP_COLORS[idx%EMP_COLORS.length]}
-var S={tab:0,emps:[],recs:[],logs:{},deds:{},showForm:false,editId:null,selDay:null,expSum:null,expRec:null,
+// 숨길 탭 번호 (0=직원관리). 나중에 직원관리를 다시 쓰려면 []로 바꾸세요
+var HIDDEN_TABS=[0];
+var S={tab:1,emps:[],recs:[],logs:{},deds:{},showForm:false,editId:null,selDay:null,expSum:null,expRec:null,workPrev:null,
   month:(function(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")})(),
   filter:"active"};
 var fGender="male";
@@ -422,14 +443,15 @@ function fm(n){return Math.round(n).toLocaleString("ko-KR")}
 function esc(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML}
 function dim(mo){var p=mo.split("-");return new Date(+p[0],+p[1],0).getDate()}
 function dow(mo,d){var p=mo.split("-");return new Date(+p[0],+p[1]-1,d).getDay()}
-function todayStr(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+d.getDate()}
+function todayStr(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
 
 function overlap(a,b,c,d){return Math.max(0,Math.min(b,d)-Math.max(a,c))}
 function calcDay(st,en,brk){
   if(!st||!en)return{total:0,night:0,ot:0};
   var a=st.split(":"),b=en.split(":");
   var sm=+a[0]*60+(+a[1]),em=+b[0]*60+(+b[1]);
-  if(em<=sm)em+=1440;
+  if(em===sm)return{total:0,night:0,ot:0}; // 출근=퇴근 시각이면 0시간 (24시간 오계산 방지)
+  if(em<sm)em+=1440;
   var tot=(em-sm-(brk||0))/60;if(tot<0)tot=0;
   var nm=overlap(sm,em,0,360)+overlap(sm,em,1320,1440)+overlap(sm,em,1440,1800);
   return{total:Math.round(tot*100)/100,night:Math.round(nm/60*100)/100,ot:Math.round(Math.max(0,tot-8)*100)/100};
@@ -450,16 +472,23 @@ function dayEmpCount(mo,d){
 }
 function dayEmpColors(mo,d){
   var colors=[];var emps=activeE();
-  emps.forEach(function(e,i){var l=getLog(e.id,mo,d);if(l.start&&l.end)colors.push(empColor(i));});
+  emps.forEach(function(e,i){var l=getLog(e.id,mo,d);if(l.worked||(l.start&&l.end))colors.push(empColor(i));});
   return colors;
 }
 
 function calcMonthPay(e,mo){
-  if(e.status==="resigned")return{base:0,weekly:0,night:0,ot:0,hol:0,total:0,weeks:[],details:[],wage:0};
+  // 퇴사자: 퇴사일이 속한 달까지는 정상 계산, 그 이후 달만 0 처리
+  var lastDay=null;
+  if(e.status==="resigned"){
+    var rm=(e.resignDate||"").slice(0,7);
+    if(!rm||mo>rm)return{base:0,weekly:0,night:0,ot:0,hol:0,total:0,weeks:[],details:[],wage:0};
+    if(mo===rm)lastDay=+e.resignDate.slice(8,10)||null; // 퇴사일 이후 날짜는 제외
+  }
   var days=dim(mo),brk=e.breakMin||0,weeks={},details=[];
+  var firstDow=dow(mo,1); // 1일의 요일 — 달력과 같은 주(일~토) 단위로 주차를 나눔
   for(var d=1;d<=days;d++){
-    var l=getLog(e.id,mo,d),dc=calcDay(l.start||"",l.end||"",brk);
-    var dw=dow(mo,d),wk=Math.ceil(d/7);
+    var l=(lastDay&&d>lastDay)?{}:getLog(e.id,mo,d),dc=calcDay(l.start||"",l.end||"",brk);
+    var dw=dow(mo,d),wk=Math.floor((d+firstDow-1)/7)+1;
     var dayWage=wageForDate(e,mo+"-"+String(d).padStart(2,"0"));
     if(!weeks[wk])weeks[wk]={hours:0,days:0,lastWage:dayWage};
     if(dc.total>0){weeks[wk].hours+=dc.total;weeks[wk].days++;weeks[wk].lastWage=dayWage;}
@@ -472,11 +501,16 @@ function calcMonthPay(e,mo){
     else{base+=dd.total*w;nightP+=dd.night*w*0.5;otP+=dd.ot*w*0.5;}
   }});
   var wkInfo=[];
-  for(var w2 in weeks){var ww=weeks[w2];var el=ww.hours>=15&&ww.days>=1;var wp=el?(ww.hours/ww.days)*ww.lastWage:0;weeklyP+=wp;
+  // 주휴수당 (법정): 주 15시간 이상 → (주 근로시간 ÷ 40) × 8시간 × 시급, 최대 8시간분
+  for(var w2 in weeks){var ww=weeks[w2];var el=ww.hours>=15&&ww.days>=1;var wp=el?Math.min(ww.hours,40)/40*8*ww.lastWage:0;weeklyP+=wp;
     wkInfo.push({week:+w2,hours:Math.round(ww.hours*10)/10,days:ww.days,pay:wp,ok:el});}
   return{base:base,weekly:weeklyP,night:nightP,ot:otP,hol:holP,total:base+nightP+otP+holP+weeklyP,weeks:wkInfo,details:details,wage:wageForMonth(e,mo)};
 }
 function activeE(){return S.emps.filter(function(e){return e.status==="active"})}
+// 화면에 보이는 직원 (숨김 제외) — 급여계산 탭 표시용
+function visibleE(){return activeE().filter(function(e){return !e.hidden})}
+// 해당 월의 급여 대상: 재직자 + 그 달(이후)에 퇴사한 직원 (마지막 달 급여 누락 방지)
+function payrollE(mo){return S.emps.filter(function(e){return e.status==="active"||(e.resignDate&&mo<=e.resignDate.slice(0,7))})}
 
 // 해당 날짜에 적용되는 시급 반환 (시급 이력 기반)
 function wageForDate(e,dateStr){
@@ -494,6 +528,7 @@ function wageForMonth(e,mo){return wageForDate(e,mo+"-01")}
 
 function render(){
   document.getElementById("tabBar").innerHTML=TABS.map(function(t,i){
+    if(HIDDEN_TABS.indexOf(i)>=0)return"";
     return'<button class="'+(S.tab===i?"on":"")+'" onclick="setTab('+i+')">'+t+'</button>';}).join("");
   var c=document.getElementById("content");
   if(S.tab===0)c.innerHTML=rEmp();else if(S.tab===1)c.innerHTML=rCalc();else if(S.tab===2)c.innerHTML=rRec();else c.innerHTML=rSet();
@@ -505,7 +540,9 @@ function rEmp(){
   if(S.editId)return rForm(S.emps.find(function(e){return e.id===S.editId}),true);
   if(S.showForm)return rForm(null,false);
   var act=S.emps.filter(function(e){return e.status==="active"}),res=S.emps.filter(function(e){return e.status==="resigned"});
-  var h='<button class="bt" onclick="showAdd()">+ 새 직원 등록</button>';
+  var h='';
+  if(HIDDEN_TABS.indexOf(0)>=0)h+='<button class="bt bs ba" onclick="setTab(3)" style="margin-bottom:12px">← 설정으로 돌아가기</button>';
+  h+='<button class="bt" onclick="showAdd()">+ 새 직원 등록</button>';
   h+='<div class="fb" style="margin-top:14px">';
   h+='<button class="'+(S.filter==="active"?"on":"")+'" onclick="sF(\'active\')">재직('+act.length+')</button>';
   h+='<button class="'+(S.filter==="resigned"?"on":"")+'" onclick="sF(\'resigned\')">퇴사('+res.length+')</button>';
@@ -534,14 +571,24 @@ function rForm(emp,isEd){
   var todayStr2=(function(){var dt=new Date();return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0")})();
   var d=emp||{name:"",gender:"male",phone:"",address:"",wage:getMinWage(),breakMin:0,memo:"",status:"active",wageHistory:[],hireDate:todayStr2,resignDate:""};
   if(emp){fGender=emp.gender||"male";}
-  var h='<div class="cd"><div style="font-size:16px;font-weight:700;margin-bottom:16px">'+(isEd?"직원 정보 수정":"새 직원 등록")+'</div>';
+  var h='';
+  if(!isEd){
+    h+='<div class="auto-cd"><h4>🪄 자동으로 입력하기</h4>';
+    h+='<p>카톡 내용을 아래 칸에 붙여넣거나, 손글씨 메모를 사진으로 찍으면 정보가 자동으로 채워집니다.</p>';
+    h+='<textarea id="autoTxt" placeholder="예) 홍길동 010-1234-5678 시급 11,000원 7월 1일 입사"></textarea>';
+    h+='<div class="br"><button class="bt" id="btnAna" onclick="anaText()">📝 글 분석하기</button>';
+    h+='<button class="bt bt-g" id="btnPho" onclick="anaPhotoClick()">📷 사진으로 입력</button></div>';
+    h+='<div id="autoMsg"></div></div>';
+  }
+  h+='<div class="cd"><div style="font-size:16px;font-weight:700;margin-bottom:16px">'+(isEd?"직원 정보 수정":"새 직원 등록")+'</div>';
   h+='<div class="rw"><div style="flex:1.2">'+fi("이름","fn",d.name,"text","","홍길동")+'</div>';
   h+='<div style="flex:.8"><label>성별</label><div class="gseg" id="gS"><button class="m'+(fGender==="male"?" on":"")+'" onclick="sG(\'male\')">남</button><button class="f'+(fGender==="female"?" on":"")+'" onclick="sG(\'female\')">여</button></div></div></div>';
   h+='<div><label>연락처</label><div class="iw"><input type="tel" inputmode="numeric" id="fph" value="'+esc(d.phone||"")+'" placeholder="010-0000-0000" maxlength="13" oninput="this.value=fmtPhone(this.value)"></div></div>';
   h+='<div class="rw"><div><label>입사일</label><div class="iw"><input type="date" id="fhd" value="'+(d.hireDate||todayStr2)+'"></div></div>';
   h+='<div><label>퇴사일 (선택)</label><div class="iw"><input type="date" id="frd" value="'+(d.resignDate||"")+'"></div></div></div>';
-  h+='<div class="rw"><div><label>시급</label><div class="iw"><input type="text" inputmode="numeric" id="fw" value="'+fmtComma(d.wage)+'" oninput="this.value=fmtComma(this.value)"><span class="sf">원</span></div></div>';
+  h+='<div class="rw"><div><label>시급</label><div class="iw"><input type="text" inputmode="numeric" id="fw" value="'+fmtComma(d.wage)+'" oninput="this.value=fmtComma(this.value);checkWage()"><span class="sf">원</span></div></div>';
   h+='<div><label>휴게시간</label><div class="iw"><input type="text" inputmode="numeric" id="fbr" value="'+esc(String(d.breakMin||0))+'" oninput="this.value=this.value.replace(/[^0-9]/g,\'\')"><span class="sf">분</span></div></div></div>';
+  h+='<div id="wchk"></div>';
   // 시급 적용 시작일 (수정 시에만 노출)
   if(isEd){
     var todayD=(function(){var dt=new Date();return dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0")})();
@@ -564,10 +611,412 @@ function rForm(emp,isEd){
   h+=fi("메모","fme",d.memo,"text","","예: 주말만 근무");
   h+='<div class="br"><button class="bt" onclick="svE('+isEd+')">'+(isEd?"수정 완료":"등록하기")+'</button>';
   h+='<button class="bt bd" style="flex:.4" onclick="cnF()">취소</button></div></div>';
+  setTimeout(checkWage,0);
   return h;
 }
 function fi(l,id,v,t,sf,ph){return'<div><label>'+l+'</label><div class="iw"><input type="'+t+'" id="'+id+'" value="'+esc(String(v||""))+'"'+(ph?' placeholder="'+ph+'"':'')+'>'+(sf?'<span class="sf">'+sf+'</span>':'')+'</div></div>';}
 function sG(g){fGender=g;var b=document.querySelectorAll("#gS button");b[0].className="m"+(g==="male"?" on":"");b[1].className="f"+(g==="female"?" on":"")}
+
+// ─── 자동입력: 텍스트/사진 분석 ───
+// 순서대로 시도: 혼잡(503) 시 예비 모델로 자동 전환
+var GEM_MODELS=["gemini-2.5-flash","gemini-2.5-flash-lite"];
+function gemPrompt(){
+  var y=new Date().getFullYear();
+  return '다음 내용에서 아르바이트 직원 정보를 추출해서 JSON으로만 답하세요. 형식: {"name":"이름 또는 null","gender":"male 또는 female 또는 null","phone":"010-0000-0000 형식 또는 null","hireDate":"YYYY-MM-DD 형식 또는 null","wage":시급 숫자만(따옴표 없이) 또는 null,"address":"주소 또는 null","memo":"기타 특이사항 또는 null"} 규칙: 1) 연도가 없는 날짜는 '+y+'년으로 간주. 2) 시급이 명확하게 적혀있지 않으면 wage는 반드시 null (추측 금지). 3) 월급이나 일당은 wage에 넣지 말고 memo에 적기. 4) 손글씨 사진이면 최대한 정확히 읽기.';
+}
+function callGemini(parts,cb,errCb){gemTry(parts,0,0,cb,errCb)}
+function gemTry(parts,mi,attempt,cb,errCb){
+  fetch("https://generativelanguage.googleapis.com/v1beta/models/"+GEM_MODELS[mi]+":generateContent?key="+encodeURIComponent(getKey()),{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({contents:[{parts:parts}],generationConfig:{responseMimeType:"application/json",temperature:0}})
+  }).then(function(r){
+    if(r.status===503||r.status===500||r.status===429){var e1=new Error(r.status===429?"사용량 초과":"서버 혼잡");e1.retry=true;e1.status=r.status;throw e1;}
+    if(!r.ok)throw new Error(r.status===400||r.status===403?"API 키가 올바르지 않습니다. [설정] 탭에서 키를 확인해 주세요":"서버 오류("+r.status+")");
+    return r.json();
+  }).then(function(j){
+    var t=j.candidates&&j.candidates[0]&&j.candidates[0].content&&j.candidates[0].content.parts&&j.candidates[0].content.parts[0].text;
+    if(!t)throw new Error("응답을 읽을 수 없습니다");
+    cb(JSON.parse(t));
+  }).catch(function(e){
+    if(e&&e.retry){
+      if(attempt<1){setTimeout(function(){gemTry(parts,mi,attempt+1,cb,errCb)},2000);return}   // 2초 후 같은 모델 재시도
+      if(mi+1<GEM_MODELS.length){gemTry(parts,mi+1,0,cb,errCb);return}                          // 예비 모델로 전환
+      errCb(new Error(e.status===429
+        ?"오늘 무료 사용량을 초과했습니다.\n내일 다시 시도해 주세요"
+        :"지금 AI 서버가 혼잡합니다.\n1~2분 뒤에 다시 시도해 주세요\n(인터넷 문제가 아닙니다)"));
+      return;
+    }
+    errCb(e);
+  });
+}
+function setBusy(b,id){
+  var ids=["btnAna","btnPho"];
+  ids.forEach(function(x){var el=document.getElementById(x);if(!el)return;el.disabled=b;});
+  var btn=document.getElementById(id);if(!btn)return;
+  if(b){btn.dataset.t=btn.innerHTML;btn.innerHTML='<span class="spin"></span>분석 중...';}
+  else if(btn.dataset.t){btn.innerHTML=btn.dataset.t;}
+}
+function anaText(){
+  var ta=document.getElementById("autoTxt");
+  var txt=(ta&&ta.value||"").trim();
+  if(!txt)return alert("먼저 위 칸에 내용을 붙여넣어 주세요");
+  if(getKey()){
+    setBusy(true,"btnAna");
+    callGemini([{text:gemPrompt()+"\n\n내용:\n"+txt}],
+      function(o){setBusy(false,"btnAna");fillEmpForm(o)},
+      function(e){setBusy(false,"btnAna");fillEmpForm(parseEmpText(txt))});
+  }else{
+    fillEmpForm(parseEmpText(txt));
+  }
+}
+var PFI_MODE="emp"; // 사진 용도: "emp"=직원정보, "work"=근무기록
+function anaPhotoClick(){
+  if(!getKey()){alert("사진 자동입력을 쓰려면 먼저 [설정] 탭에서\n제미나이 API 키를 저장해 주세요.");return}
+  PFI_MODE="emp";
+  document.getElementById("pfi").click();
+}
+// 정규식 파싱 (API 키 없거나 실패 시 대비용)
+function parseEmpText(txt){
+  var o={name:null,gender:null,phone:null,hireDate:null,wage:null,address:null,memo:null};
+  var phm=txt.match(/01[016789][-.\s]?\d{3,4}[-.\s]?\d{4}/);
+  if(phm)o.phone=fmtPhone(phm[0]);
+  var wm=txt.match(/시급\s*:?\s*([\d,]+)\s*원?/)||txt.match(/([\d,]{4,})\s*원/);
+  if(wm){var w=Number(wm[1].replace(/,/g,""));if(w>=5000&&w<=100000)o.wage=w;}
+  var y=new Date().getFullYear();
+  var dm=txt.match(/(20\d{2})[.\-\/년\s]+(\d{1,2})[.\-\/월\s]+(\d{1,2})/);
+  if(dm)o.hireDate=dm[1]+"-"+String(+dm[2]).padStart(2,"0")+"-"+String(+dm[3]).padStart(2,"0");
+  else{var dm2=txt.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/);if(dm2)o.hireDate=y+"-"+String(+dm2[1]).padStart(2,"0")+"-"+String(+dm2[2]).padStart(2,"0");}
+  if(/여자|여성|\(여\)/.test(txt))o.gender="female";
+  else if(/남자|남성|\(남\)/.test(txt))o.gender="male";
+  var badNm=/^(여자|남자|여성|남성|시급|주소|전화|연락|입사|이름|메모)$/;
+  var nm=txt.match(/이름\s*:?\s*([가-힣]{2,4})/);
+  if(nm&&!badNm.test(nm[1]))o.name=nm[1];
+  else{
+    var nm2=txt.match(/([가-힣]{2,4})\s*(님|씨)?\s*01[016789]/);
+    if(nm2&&!badNm.test(nm2[1]))o.name=nm2[1];
+    else{var first=txt.trim().match(/^([가-힣]{2,4})(?![가-힣])/);if(first&&!badNm.test(first[1]))o.name=first[1];}
+  }
+  var ad=txt.match(/주소\s*:?\s*(\S[^\n]*)/);if(ad)o.address=ad[1].trim();
+  return o;
+}
+// 분석 결과를 폼에 채우기
+function fillEmpForm(o){
+  if(!o||typeof o!=="object")o={};
+  var found=[];
+  function setV(id,v){var el=document.getElementById(id);if(el&&v!=null&&v!=="")el.value=v;}
+  if(o.name){setV("fn",String(o.name));found.push("이름")}
+  if(o.gender==="male"||o.gender==="female"){sG(o.gender);found.push("성별")}
+  if(o.phone){setV("fph",fmtPhone(String(o.phone)));found.push("연락처")}
+  if(o.hireDate&&/^\d{4}-\d{2}-\d{2}$/.test(String(o.hireDate))){setV("fhd",o.hireDate);found.push("입사일")}
+  if(o.address){setV("fad",String(o.address));found.push("주소")}
+  if(o.memo)setV("fme",String(o.memo));
+  var fw=document.getElementById("fw");
+  var wageNum=Number(String(o.wage||"").replace(/[^0-9]/g,""))||0;
+  var htm="";
+  if(wageNum){
+    fw.value=fmtComma(wageNum);fw.classList.remove("warn");found.push("시급");
+  }
+  if(found.length)htm+='<div style="margin-top:10px;font-size:14px;color:var(--green);font-weight:700">✅ 자동 입력됨: '+found.join(", ")+'</div>';
+  else htm+='<div style="margin-top:10px;font-size:14px;color:var(--red);font-weight:600">내용에서 정보를 찾지 못했습니다. 아래에 직접 입력해 주세요.</div>';
+  if(!wageNum){
+    fw.value="";fw.classList.add("warn");
+    htm+='<div style="margin-top:6px;font-size:14px;color:var(--orange);font-weight:700">❗ 시급을 찾지 못했습니다. 아래 주황색 시급 칸에 직접 입력해 주세요.</div>';
+    setTimeout(function(){fw.focus();fw.scrollIntoView({behavior:"smooth",block:"center"})},400);
+  }
+  htm+='<div style="margin-top:6px;font-size:13px;color:var(--dim)">자동 입력된 내용이 맞는지 꼭 확인해 주세요.</div>';
+  var msg=document.getElementById("autoMsg");if(msg)msg.innerHTML=htm;
+  checkWage();
+}
+// 시급 실시간 검증 (최저시급 비교 + 일당 예시)
+function checkWage(){
+  var fw=document.getElementById("fw"),box=document.getElementById("wchk");
+  if(!fw||!box)return;
+  var w=Number(fw.value.replace(/[^0-9]/g,""))||0;
+  var mw=getMinWage(),y=new Date().getFullYear();
+  if(!w){box.className="";box.innerHTML="";return}
+  var daily=fm(w*8);
+  if(w<mw){
+    fw.classList.add("warn");
+    box.className="wchk bad";
+    box.innerHTML="⚠️ "+y+"년 최저시급("+fm(mw)+"원)보다 <b>"+fm(mw-w)+"원 적습니다.</b> 맞는지 다시 확인해 주세요.<br>참고: 이 시급으로 하루 8시간 일하면 일당 "+daily+"원입니다.";
+  }else{
+    fw.classList.remove("warn");
+    box.className="wchk ok";
+    box.innerHTML="✅ "+y+"년 최저시급("+fm(mw)+"원) 이상입니다.<br>이 시급으로 하루 8시간 일하면 일당 "+daily+"원입니다.";
+  }
+}
+
+// ═══ 근무기록 자동입력 (급여계산 탭) ═══
+function p2(n){return String(n).padStart(2,"0")}
+function dispT(t){var p=t.split(":");var h=+p[0],m=+p[1];return h+"시"+(m?" "+m+"분":"")}
+function hhAdd(st,hours){
+  var p=st.split(":");var em=(+p[0]*60+(+p[1])+Math.round(hours*60))%1440;
+  return p2(Math.floor(em/60))+":"+p2(em%60);
+}
+function findEmpByName(n){return S.emps.find(function(e){return e.name===n})}
+function workAutoCard(){
+  var h='<div class="auto-cd"><h4>🪄 근무기록 자동입력</h4>';
+  h+='<p>카톡 내용을 붙여넣거나 손글씨 장부를 사진으로 찍으면,<br>이름·날짜·시간을 읽어서 달력에 넣어드립니다.</p>';
+  h+='<textarea id="workTxt" placeholder="예) 홍길동 7월 1일 9시~18시&#10;김영희 7/2 5시간"></textarea>';
+  h+='<div class="br"><button class="bt" id="btnWAna" onclick="anaWorkText()">📝 글 분석하기</button>';
+  h+='<button class="bt bt-g" id="btnWPho" onclick="anaWorkPhotoClick()">📷 사진으로 입력</button></div>';
+  h+='<div id="workMsg"></div></div>';
+  if(S.workPrev)h+=workPrevCard();
+  return h;
+}
+function workPrevCard(){
+  var p=S.workPrev;
+  var h='<div class="cd gt"><div style="font-size:16px;font-weight:700;margin-bottom:4px">🔍 읽은 내용을 확인해 주세요</div>';
+  h+='<div style="font-size:13px;color:var(--dim);margin-bottom:12px">잘못 읽은 줄은 ✕를 눌러 지우고, 맞으면 아래 파란 버튼을 누르세요.</div>';
+  p.recs.forEach(function(r,i){
+    var dp=r.date.split("-");
+    var when=(+dp[1])+"월 "+(+dp[2])+"일";
+    var time=r.hoursOnly?(r.hours+"시간 ("+dispT(r.start)+" 출근으로 입력)"):(dispT(r.start)+" ~ "+dispT(r.end));
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">';
+    h+='<span style="font-size:15px"><b>'+esc(r.name)+'</b> · '+when+' · '+time+'</span>';
+    h+='<button class="time-del" style="height:36px;width:36px" onclick="delWorkRec('+i+')">✕</button></div>';
+  });
+  if(p.dupNames.length){
+    h+='<div style="font-size:14px;font-weight:700;margin:14px 0 4px;color:var(--accent)">👥 이미 등록된 이름입니다. 같은 분인가요?</div>';
+    p.dupNames.forEach(function(n){
+      var an=!!p.asNew[n];
+      h+='<div style="margin-top:8px"><label>'+esc(n)+' 님</label><div class="seg">';
+      h+='<button class="'+(an?"":"on")+'" onclick="setDup(\''+esc(n)+'\',false)">같은 사람</button>';
+      h+='<button class="'+(an?"on":"")+'" onclick="setDup(\''+esc(n)+'\',true)">다른 사람 (새로 추가)</button></div></div>';
+    });
+  }
+  var exs=exWageList(p);
+  if(exs.length){
+    h+='<div style="font-size:14px;font-weight:700;margin:14px 0 4px">💰 등록된 분의 시급 (바뀌었으면 고쳐주세요)</div>';
+    exs.forEach(function(n,i){
+      var e=findEmpByName(n);
+      var w=p.wages[n]||(e&&e.wage)||"";
+      h+='<div style="margin-top:8px"><label>'+esc(n)+' 님의 시급 (지금: '+fm(e&&e.wage||0)+'원)</label><div class="iw" style="margin-bottom:4px"><input type="text" inputmode="numeric" id="ewg_'+i+'" value="'+(w?fmtComma(w):"")+'" oninput="this.value=fmtComma(this.value);ewgChk('+i+')"><span class="sf">원</span></div><div id="ewgc_'+i+'" style="font-size:13px;line-height:1.5;margin-bottom:6px"></div></div>';
+    });
+  }
+  var need=wageNeedList(p);
+  if(need.length){
+    h+='<div style="font-size:14px;font-weight:700;margin:14px 0 4px;color:var(--orange)">❗ 새로 추가되는 분입니다. 시급을 확인해 주세요</div>';
+    need.forEach(function(n,i){
+      var w=p.wages[n]||"";
+      var label=p.asNew[n]?esc(n)+' 님 (동명이인 → "'+esc(uniqName(n))+'"로 저장됨)':esc(n)+' 님의 시급';
+      h+='<div style="margin-top:8px"><label>'+label+'</label><div class="iw" style="margin-bottom:4px"><input type="text" inputmode="numeric" id="wg_'+i+'" value="'+(w?fmtComma(w):"")+'" placeholder="예: '+fmtComma(getMinWage())+'" oninput="this.value=fmtComma(this.value);wgChk('+i+')"><span class="sf">원</span></div><div id="wgc_'+i+'" style="font-size:13px;line-height:1.5;margin-bottom:6px"></div></div>';
+    });
+  }
+  h+='<div class="br" style="margin-top:14px"><button class="bt" onclick="applyWork()">✅ 달력에 반영하기</button>';
+  h+='<button class="bt bd" style="flex:.4" onclick="cancelWork()">취소</button></div></div>';
+  setTimeout(function(){if(S.workPrev){wageNeedList(S.workPrev).forEach(function(n,i){wgChk(i)});exWageList(S.workPrev).forEach(function(n,i){ewgChk(i)});}},0);
+  return h;
+}
+// 시급 입력이 필요한 사람 목록 (완전히 새 이름 + 동명이인 중 "다른 사람" 선택)
+function wageNeedList(p){
+  return p.newNames.concat(p.dupNames.filter(function(n){return p.asNew[n]}));
+}
+// 이미 등록된 분 목록 ("같은 사람"으로 처리되는 이름) — 시급 수정 가능
+function exWageList(p){
+  return p.dupNames.filter(function(n){return !p.asNew[n]});
+}
+function ewgChk(i){
+  var p=S.workPrev;if(!p)return;
+  var n=exWageList(p)[i],e=findEmpByName(n);
+  var el=document.getElementById("ewg_"+i),box=document.getElementById("ewgc_"+i);
+  if(!el||!box||!e)return;
+  var w=Number(el.value.replace(/[^0-9]/g,""))||0,mw=getMinWage();
+  if(!w){el.classList.remove("warn");box.innerHTML='<span style="color:var(--dim)">비워두면 지금 시급('+fm(e.wage)+'원)이 그대로 유지됩니다</span>';return}
+  if(w===e.wage){el.classList.remove("warn");box.innerHTML='<span style="color:var(--dim)">지금 시급과 같습니다 (변경 없음)</span>';return}
+  if(w<mw){el.classList.add("warn");box.innerHTML='<span style="color:var(--red);font-weight:600">⚠️ 최저시급('+fm(mw)+'원)보다 '+fm(mw-w)+'원 적습니다</span>';}
+  else{el.classList.remove("warn");box.innerHTML='<span style="color:var(--accent);font-weight:600">🔄 '+fm(e.wage)+'원 → '+fm(w)+'원으로 바뀝니다 (이번 근무일부터 적용)</span>';}
+}
+// 중복되지 않는 이름 만들기: 홍길동 → 홍길동(2) → 홍길동(3)...
+function uniqName(n){
+  if(!findEmpByName(n))return n;
+  var i=2;while(findEmpByName(n+"("+i+")"))i++;
+  return n+"("+i+")";
+}
+function keepWageInputs(p){
+  wageNeedList(p).forEach(function(n,i){
+    var el=document.getElementById("wg_"+i);
+    if(el){var v=Number(el.value.replace(/[^0-9]/g,""))||0;if(v)p.wages[n]=v;}
+  });
+  exWageList(p).forEach(function(n,i){
+    var el=document.getElementById("ewg_"+i);
+    if(el){var v=Number(el.value.replace(/[^0-9]/g,""))||0;if(v)p.wages[n]=v;}
+  });
+}
+function setDup(n,v){
+  var p=S.workPrev;if(!p)return;
+  keepWageInputs(p);
+  p.asNew[n]=v;
+  render();
+}
+function wgChk(i){
+  var el=document.getElementById("wg_"+i),box=document.getElementById("wgc_"+i);
+  if(!el||!box)return;
+  var w=Number(el.value.replace(/[^0-9]/g,""))||0,mw=getMinWage();
+  if(!w){box.innerHTML='<span style="color:var(--orange);font-weight:600">시급을 입력해 주세요</span>';return}
+  if(w<mw){el.classList.add("warn");box.innerHTML='<span style="color:var(--red);font-weight:600">⚠️ 올해 최저시급('+fm(mw)+'원)보다 '+fm(mw-w)+'원 적습니다</span>';}
+  else{el.classList.remove("warn");box.innerHTML='<span style="color:var(--green);font-weight:600">✅ 최저시급 이상 · 8시간 일당 '+fm(w*8)+'원</span>';}
+}
+function delWorkRec(i){
+  var p=S.workPrev;if(!p)return;
+  keepWageInputs(p); // 입력 중인 시급 보존
+  p.recs.splice(i,1);
+  if(!p.recs.length){S.workPrev=null;render();return}
+  var names=[];p.recs.forEach(function(r){if(names.indexOf(r.name)<0)names.push(r.name)});
+  p.newNames=names.filter(function(n){return !findEmpByName(n)});
+  p.dupNames=names.filter(function(n){return !!findEmpByName(n)});
+  Object.keys(p.asNew).forEach(function(k){if(names.indexOf(k)<0)delete p.asNew[k]});
+  render();
+}
+function cancelWork(){S.workPrev=null;render()}
+function gemWorkPrompt(){
+  var y=new Date().getFullYear();
+  return '다음 내용에서 아르바이트 근무기록을 추출해서 JSON으로만 답하세요. 형식: {"records":[{"name":"이름","date":"YYYY-MM-DD","start":"HH:MM 또는 null","end":"HH:MM 또는 null","hours":총 근무시간 숫자(따옴표 없이) 또는 null}],"wages":[{"name":"이름","wage":시급 숫자}]} 규칙: 1) 연도가 없으면 '+y+'년. 2) 한 사람이 여러 날 일했으면 날짜마다 records에 한 개씩. 3) 출근·퇴근 시각이 있으면 start와 end를 24시간제로 쓰고 hours는 null. 오전/오후 표기가 없으면 상식적으로 판단(예: 9시 출근=09:00, 6시 퇴근=18:00). 4) "5시간"처럼 총 시간만 있으면 start와 end는 null, hours에 숫자. 5) 시급 언급이 있는 사람만 wages에 넣기(추측 금지). 6) 손글씨 사진이면 최대한 정확히 읽기. 7) JSON 외 다른 말 금지.';
+}
+function anaWorkText(){
+  var ta=document.getElementById("workTxt");
+  var txt=(ta&&ta.value||"").trim();
+  if(!txt)return alert("먼저 위 칸에 내용을 붙여넣어 주세요");
+  if(getKey()){
+    setWBusy(true,"btnWAna");
+    callGemini([{text:gemWorkPrompt()+"\n\n내용:\n"+txt}],
+      function(o){setWBusy(false,"btnWAna");showWorkPreview(o)},
+      function(e){setWBusy(false,"btnWAna");showWorkPreview(parseWorkText(txt))});
+  }else{
+    showWorkPreview(parseWorkText(txt));
+  }
+}
+function anaWorkPhotoClick(){
+  if(!getKey()){alert("사진 자동입력을 쓰려면 먼저 [설정] 탭에서\n제미나이 API 키를 저장해 주세요.");return}
+  PFI_MODE="work";
+  document.getElementById("pfi").click();
+}
+function setWBusy(b,id){
+  ["btnWAna","btnWPho"].forEach(function(x){var el=document.getElementById(x);if(el)el.disabled=b;});
+  var btn=document.getElementById(id);if(!btn)return;
+  if(b){btn.dataset.t=btn.innerHTML;btn.innerHTML='<span class="spin"></span>분석 중...';}
+  else if(btn.dataset.t){btn.innerHTML=btn.dataset.t;}
+}
+// 정규식 파싱 (API 키 없거나 실패 시 대비용)
+function parseWorkText(txt){
+  var y=new Date().getFullYear(),recs=[],wages=[],curName=null;
+  txt.split(/\n+/).forEach(function(line){
+    line=line.trim();if(!line)return;
+    var nm=line.match(/^([가-힣]{2,4})(?![가-힣])/);
+    if(nm&&!/^(오전|오후|시급|주소|근무|출근|퇴근)/.test(nm[1]))curName=nm[1];
+    var wm=line.match(/시급\s*:?\s*([\d,]+)\s*원?/);
+    if(wm&&curName){var wv=Number(wm[1].replace(/,/g,""));if(wv>=5000&&wv<=100000)wages.push({name:curName,wage:wv});}
+    var date=null,rest=line;
+    var dm=line.match(/(20\d{2})[.\-\/]\s*(\d{1,2})[.\-\/]\s*(\d{1,2})/);
+    if(dm){date=dm[1]+"-"+p2(+dm[2])+"-"+p2(+dm[3]);rest=line.replace(dm[0]," ");}
+    else{dm=line.match(/(\d{1,2})\s*[\/월]\s*(\d{1,2})\s*일?/);if(dm){date=y+"-"+p2(+dm[1])+"-"+p2(+dm[2]);rest=line.replace(dm[0]," ");}}
+    if(!date||!curName)return;
+    var st=null,en=null,hours=null;
+    var tm=rest.match(/(오전|오후)?\s*(\d{1,2})(?::(\d{2})|시\s*(반)?)?\s*(?:~|-|부터|에서)\s*(오전|오후)?\s*(\d{1,2})(?::(\d{2})|시\s*(반)?)?/);
+    if(tm&&+tm[2]<=23&&+tm[6]<=23){
+      var sh=+tm[2],smn=tm[3]?+tm[3]:(tm[4]?30:0);
+      var eh=+tm[6],emn=tm[7]?+tm[7]:(tm[8]?30:0);
+      if(tm[1]==="오후"&&sh<12)sh+=12;
+      if(tm[5]==="오후"&&eh<12)eh+=12;
+      if(eh<=sh&&eh<12)eh+=12; // 9~6 → 9~18
+      st=p2(sh)+":"+p2(smn);en=p2(eh)+":"+p2(emn);
+    }else{
+      var hm=rest.match(/([\d.]+)\s*시간/);
+      if(hm)hours=parseFloat(hm[1]);
+    }
+    if(st||hours)recs.push({name:curName,date:date,start:st,end:en,hours:hours});
+  });
+  return{records:recs,wages:wages};
+}
+// 분석 결과 → 미리보기
+function showWorkPreview(o){
+  var raw=(o&&o.records)||[],recs=[],skipped=0;
+  raw.forEach(function(r){
+    if(!r||!r.name||!r.date||!/^\d{4}-\d{2}-\d{2}$/.test(String(r.date))){skipped++;return}
+    var name=String(r.name).trim().replace(/['"\\<>]/g,"").slice(0,10);
+    var st=null,en=null,hoursOnly=false,hours=null;
+    var okT=/^\d{1,2}:\d{2}$/;
+    if(r.start&&r.end&&okT.test(String(r.start))&&okT.test(String(r.end))){
+      var sp=String(r.start).split(":"),ep=String(r.end).split(":");
+      st=p2(+sp[0]%24)+":"+sp[1];en=p2(+ep[0]%24)+":"+ep[1];
+      var dc=calcDay(st,en,0);hours=dc.total;
+    }else if(r.hours&&Number(r.hours)>0&&Number(r.hours)<=24){
+      hours=Number(r.hours);st="09:00";en=hhAdd(st,hours);hoursOnly=true;
+    }else{skipped++;return}
+    recs.push({name:name,date:String(r.date),start:st,end:en,hours:hours,hoursOnly:hoursOnly});
+  });
+  var msg=document.getElementById("workMsg");
+  if(!recs.length){
+    S.workPrev=null;
+    if(msg)msg.innerHTML='<div style="margin-top:10px;font-size:14px;color:var(--red);font-weight:600">내용에서 근무기록(이름·날짜·시간)을 찾지 못했습니다.<br>예) 홍길동 7월 1일 9시~18시</div>';
+    return;
+  }
+  var wages={};((o&&o.wages)||[]).forEach(function(w){if(w&&w.name&&w.wage)wages[String(w.name).trim()]=Number(String(w.wage).replace(/[^0-9]/g,""))||0});
+  var names=[];recs.forEach(function(r){if(names.indexOf(r.name)<0)names.push(r.name)});
+  var newNames=names.filter(function(n){return !findEmpByName(n)});
+  var dupNames=names.filter(function(n){return !!findEmpByName(n)});
+  S.workPrev={recs:recs,newNames:newNames,dupNames:dupNames,asNew:{},wages:wages,skipped:skipped};
+  render();
+  setTimeout(function(){var el=document.querySelector(".cd.gt");if(el)el.scrollIntoView({behavior:"smooth",block:"start"})},50);
+}
+// 미리보기 → 달력 반영
+function applyWork(){
+  var p=S.workPrev;if(!p)return;
+  var mw=getMinWage(),wageMap={},need=wageNeedList(p);
+  for(var i=0;i<need.length;i++){
+    var n=need[i],el=document.getElementById("wg_"+i);
+    var w=Number((el&&el.value||"").replace(/[^0-9]/g,""))||0;
+    if(!w){alert('"'+n+'" 님의 시급을 입력해 주세요');if(el){el.classList.add("warn");el.focus()}return}
+    if(w<mw&&!confirm('"'+n+'" 님의 시급 '+fm(w)+'원은\n올해 최저시급 '+fm(mw)+'원보다 낮습니다.\n\n이대로 진행하시겠습니까?'))return;
+    wageMap[n]=w;
+  }
+  // 기존 직원 시급 변경 확인
+  var exs=exWageList(p),exChanges=[];
+  for(var j=0;j<exs.length;j++){
+    var xn=exs[j],xe=findEmpByName(xn),xel=document.getElementById("ewg_"+j);
+    var xw=Number((xel&&xel.value||"").replace(/[^0-9]/g,""))||0;
+    if(!xe||!xw||xw===xe.wage)continue;
+    if(xw<mw&&!confirm('"'+xn+'" 님의 시급 '+fm(xw)+'원은\n올해 최저시급 '+fm(mw)+'원보다 낮습니다.\n\n이대로 변경하시겠습니까?'))return;
+    exChanges.push({e:xe,w:xw});
+  }
+  // 시급 변경 적용 (이번에 입력하는 가장 빠른 근무일부터 새 시급, 이전 기록은 그대로)
+  exChanges.forEach(function(c){
+    var eff=null;
+    p.recs.forEach(function(r){if(r.name===c.e.name&&(!eff||r.date<eff))eff=r.date});
+    if(!eff)eff=todayStr();
+    if(!c.e.wageHistory||!c.e.wageHistory.length)c.e.wageHistory=[{date:"2000-01-01",wage:c.e.wage}];
+    c.e.wageHistory=c.e.wageHistory.filter(function(wh){return wh.date!==eff});
+    c.e.wageHistory.push({date:eff,wage:c.w});
+    c.e.wage=c.w;
+  });
+  // 새 직원 자동 생성 (동명이인은 "이름(2)"로, 이름별 가장 빠른 근무일을 입사일로)
+  var empMap={};
+  need.forEach(function(n){
+    var first=null;
+    p.recs.forEach(function(r){if(r.name===n&&(!first||r.date<first))first=r.date});
+    var e={id:gid(),name:p.asNew[n]?uniqName(n):n,gender:"male",phone:"",address:"",wage:wageMap[n],breakMin:0,
+      memo:"자동입력으로 추가됨",status:"active",hireDate:first||todayStr(),resignDate:"",
+      wageHistory:[{date:"2000-01-01",wage:wageMap[n]}]};
+    S.emps.push(e);empMap[n]=e;
+  });
+  // 근무기록 반영
+  var cnt=0,firstMo=null;
+  p.recs.forEach(function(r){
+    var e=empMap[r.name]||findEmpByName(r.name);if(!e)return;
+    if(e.status==="resigned"){e.status="active";e.resignDate="";}
+    var mo=r.date.slice(0,7),d=+r.date.slice(8,10);
+    setLogEntry(e.id,mo,d,"start",r.start);
+    setLogEntry(e.id,mo,d,"end",r.end);
+    cnt++;if(!firstMo)firstMo=mo;
+  });
+  if(firstMo){S.month=firstMo;}
+  var added=need.map(function(n){return empMap[n].name});
+  S.workPrev=null;S.selDay=null;sv();render();
+  alert(cnt+"건의 근무기록이 달력에 입력되었습니다."
+    +(added.length?"\n새로 추가된 분: "+added.join(", "):"")
+    +(exChanges.length?"\n시급 변경: "+exChanges.map(function(c){return c.e.name+" → "+fm(c.w)+"원"}).join(", "):"")
+    +"\n\n달력에서 점이 찍힌 날짜를 누르면 시간을 고칠 수 있고,\n[설정 → 직원 정리]에서 이름·시급을 고치거나 삭제할 수 있습니다.");
+}
 function showAdd(){S.showForm=true;fGender="male";render()}
 function edE(id){S.editId=id;render()}
 function cnF(){S.showForm=false;S.editId=null;render()}
@@ -575,6 +1024,14 @@ function sF(f){S.filter=f;render()}
 function svE(isEd){
   var nm=document.getElementById("fn").value.trim();if(!nm)return alert("이름을 입력하세요");
   var newWage=Number(document.getElementById("fw").value.replace(/[^0-9]/g,""))||0;
+  if(!newWage){
+    alert("시급을 입력해 주세요");
+    var fwEl=document.getElementById("fw");fwEl.classList.add("warn");fwEl.focus();
+    return;
+  }
+  if(newWage<getMinWage()){
+    if(!confirm("입력한 시급 "+fm(newWage)+"원은\n올해 최저시급 "+fm(getMinWage())+"원보다 낮습니다.\n\n이대로 저장하시겠습니까?"))return;
+  }
   var hireDate=document.getElementById("fhd").value;
   var resignDate=document.getElementById("frd").value;
   var base={name:nm,gender:fGender,phone:document.getElementById("fph").value.trim(),address:document.getElementById("fad").value.trim(),
@@ -604,16 +1061,24 @@ function svE(isEd){
   }
   sv();render();
 }
-function dlE(id){if(!confirm("삭제하시겠습니까?"))return;S.emps=S.emps.filter(function(e){return e.id!==id});sv();render()}
+function dlE(id){
+  if(!confirm("삭제하시겠습니까?\n\n이 직원의 달력 근무기록도 함께 지워지며,\n되돌릴 수 없습니다."))return;
+  S.emps=S.emps.filter(function(e){return e.id!==id});
+  // 남은 근무기록·삭감 데이터 정리 (키 형식: 직원id_YYYY-MM)
+  Object.keys(S.logs).forEach(function(k){if(k.indexOf(id+"_")===0)delete S.logs[k]});
+  Object.keys(S.deds).forEach(function(k){if(k.indexOf(id+"_")===0)delete S.deds[k]});
+  sv();render();
+}
 function rsE(id){if(!confirm("퇴사 처리하시겠습니까?"))return;var e=S.emps.find(function(x){return x.id===id});e.status="resigned";if(!e.resignDate){var dt=new Date();e.resignDate=dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0")+"-"+String(dt.getDate()).padStart(2,"0");}sv();render()}
 function reE(id){var e=S.emps.find(function(x){return x.id===id});e.status="active";e.resignDate="";sv();render()}
 
 // ═══ 급여계산 (달력 UI) ═══
 function rCalc(){
   var ym=S.month.split("-").map(Number),y=ym[0],m=ym[1];
-  var emps=activeE();
-  var h='<div class="mp"><button onclick="shM(-1)">◀</button><span>'+y+'년 '+m+'월</span><button onclick="shM(1)">▶</button></div>';
-  if(!emps.length)return h+'<div class="ey">직원을 먼저 등록해주세요</div>';
+  var emps=activeE(),hiddenCnt=emps.length-visibleE().length;
+  var h=workAutoCard();
+  h+='<div class="mp"><button onclick="shM(-1)">◀</button><span>'+y+'년 '+m+'월</span><button onclick="shM(1)">▶</button></div>';
+  if(!activeE().length)return h+'<div class="ey">아직 근무기록이 없습니다<small>위에서 사진을 찍거나 카톡 내용을 붙여넣으면 자동으로 시작됩니다</small></div>';
 
   // Calendar
   var days=dim(S.month),firstDow=dow(S.month,1);
@@ -623,7 +1088,7 @@ function rCalc(){
   for(var i=0;i<firstDow;i++)h+='<div class="cal-cell empty"></div>';
   for(var d=1;d<=days;d++){
     var dw=dow(S.month,d),isSun=dw===0,isSat=dw===6;
-    var isToday=td===curYM+"-"+d;
+    var isToday=td===curYM+"-"+String(d).padStart(2,"0");
     var isSel=S.selDay===d;
     var colors=dayEmpColors(S.month,d);
     var cls="cal-cell"+(isSun?" sun":"")+(isSat?" sat":"")+(isToday?" today":"")+(isSel?" sel":"");
@@ -642,7 +1107,19 @@ function rCalc(){
     var gi=e.gender==="female"?"👩":"👨";
     h+='<span class="leg-item"><span class="leg-dot" style="background:'+empColor(i)+'"></span>'+gi+' '+esc(e.name)+'</span>';
   });
+  h+='<span class="leg-item"><button class="bt bs ba" style="min-height:34px;padding:7px 12px" onclick="tgVis()">👀 보이는 직원 설정'+(hiddenCnt?' ('+hiddenCnt+'명 숨김)':'')+'</button></span>';
   h+='</div>';
+  // 보이는 직원 설정 패널
+  if(S.visOpen){
+    h+='<div class="cd"><div style="font-size:15px;font-weight:700;margin-bottom:4px">👀 보고 싶은 직원만 켜세요</div>';
+    h+='<div style="font-size:13px;color:var(--dim);margin-bottom:10px">이름을 누르면 켜짐/꺼짐이 바뀝니다. 꺼진 분은 <b>아래 급여 요약에서만</b> 빠지고, 달력과 기록은 그대로 유지됩니다.</div>';
+    h+='<div class="emp-chips">';
+    activeE().forEach(function(e){
+      var on=!e.hidden;
+      h+='<button class="emp-chip'+(on?" on":"")+'" style="'+(on?'border-color:var(--green);background:var(--gs);color:var(--green)':'')+'" onclick="tgHide(\''+e.id+'\')">'+(on?"👁 ":"🚫 ")+esc(e.name)+'</button>';
+    });
+    h+='</div><div style="font-size:12px;color:var(--dim);margin-top:6px">퇴사 처리나 삭제는 [설정 → 직원 정리]에서 할 수 있습니다.</div></div>';
+  }
 
   // Day detail panel
   if(S.selDay!==null){
@@ -688,16 +1165,16 @@ function rCalc(){
     h+='</div>';
   }
 
-  // Monthly summary per employee
-  h+='<div style="font-size:14px;font-weight:700;margin:16px 0 10px">📊 월간 급여 요약</div>';
+  // Monthly summary per employee (숨긴 직원은 요약 표시에서만 제외)
+  h+='<div style="font-size:14px;font-weight:700;margin:16px 0 10px">📊 월간 급여 요약'+(hiddenCnt?' <span style="font-size:12px;font-weight:500;color:var(--dim)">('+hiddenCnt+'명 숨김 — 저장에는 포함됩니다)</span>':'')+'</div>';
   var grandT=0;
-  emps.forEach(function(e){
+  payrollE(S.month).filter(function(e){return !e.hidden}).forEach(function(e){
     var pay=calcMonthPay(e,S.month);
     var ded=getDed(e.id,S.month);
     var finalPay=Math.max(0,pay.total-ded.amount);
     grandT+=finalPay;
     var open=S.expSum===e.id,gi=e.gender==="female"?"👩":"👨";
-    var bds='';
+    var bds=e.status==="resigned"?'<span class="bg bgp">퇴사</span>':'';
     if(pay.weekly>0)bds+='<span class="bg bgg">주휴</span>';
     if(pay.night>0)bds+='<span class="bg bgo">야간</span>';
     if(pay.ot>0)bds+='<span class="bg bga">연장</span>';
@@ -823,9 +1300,11 @@ function setDedNote(eid,val){
   sv();
 }
 function shM(d){var ym=S.month.split("-").map(Number);var dt=new Date(ym[0],ym[1]-1+d,1);S.month=dt.getFullYear()+"-"+String(dt.getMonth()+1).padStart(2,"0");S.selDay=null;render()}
+function tgVis(){S.visOpen=!S.visOpen;render()}
+function tgHide(id){var e=S.emps.find(function(x){return x.id===id});if(!e)return;e.hidden=!e.hidden;sv();render()}
 
 function svRec(){
-  var emps=activeE();if(!emps.length)return;
+  var emps=payrollE(S.month);if(!emps.length)return;
   var details=emps.map(function(e){
     var pay=calcMonthPay(e,S.month);
     var ded=getDed(e.id,S.month);
@@ -845,7 +1324,11 @@ function rRec(){
     var ym=rec.month.split("-").map(Number),y=ym[0],m=ym[1];
     var h='<div class="rc"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="font-size:16px;font-weight:700">'+y+'년 '+m+'월</span>';
     h+='<div style="display:flex;gap:6px"><button class="bt bs ba" onclick="exXl(\''+rec.id+'\')">엑셀</button><button class="bt bs bd" onclick="dlRec(\''+rec.id+'\')">삭제</button></div></div>';
-    rec.details.forEach(function(d,di){
+    // 0원인 사람은 목록에서 숨김 (데이터·엑셀에는 그대로 포함)
+    var shown=rec.details.filter(function(d){var fp0=(d.finalPay!==undefined)?d.finalPay:d.pay.total;return fp0>0});
+    var zeroCnt=rec.details.length-shown.length;
+    if(zeroCnt)h+='<div style="font-size:12px;color:var(--dim);margin-bottom:8px">급여 0원인 '+zeroCnt+'명은 표시하지 않습니다</div>';
+    shown.forEach(function(d,di){
       var gi=d.gender==="female"?"👩":"👨";
       var key=rec.id+"_"+di;
       var open=S.expRec===key;
@@ -875,7 +1358,7 @@ function rRec(){
             else if(it[0]==="연장수당")h+=fml('= '+oH.toFixed(1)+'h × '+fm(singleWage)+'원 × 50%');
             else if(it[0]==="휴일수당")h+=fml('= 휴일근무 '+holH.toFixed(1)+'h 가산분');
             else if(it[0]==="주휴수당"&&p.weeks){
-              var wtxt=p.weeks.filter(function(w){return w.ok}).map(function(w){return w.week+'주('+w.hours+'h÷'+w.days+'일×시급)'}).join(' + ');
+              var wtxt=p.weeks.filter(function(w){return w.ok}).map(function(w){return w.week+'주('+w.hours+'h÷40×8h×시급)'}).join(' + ');
               if(wtxt)h+=fml('= '+wtxt);
             }
           }else if(it[0]==="기본급"){
@@ -906,7 +1389,16 @@ function rRec(){
   }).join("");
 }
 function tgRec(key){S.expRec=S.expRec===key?null:key;render()}
-function dlRec(id){if(!confirm("삭제?"))return;S.recs=S.recs.filter(function(r){return r.id!==id});sv();render()}
+function dlRec(id){
+  var rec=S.recs.find(function(r){return r.id===id});if(!rec)return;
+  var ym=rec.month.split("-");
+  if(!confirm((+ym[0])+"년 "+(+ym[1])+"월 기록을 삭제하시겠습니까?\n\n급여계산 달력의 "+(+ym[1])+"월 근무기록(출퇴근 시간)도\n함께 지워지며, 되돌릴 수 없습니다.\n(직원 이름과 시급 정보는 남습니다)"))return;
+  S.recs=S.recs.filter(function(r){return r.id!==id});
+  // 그 달의 달력 근무기록·삭감 내역도 삭제 (키 형식: 직원id_YYYY-MM)
+  Object.keys(S.logs).forEach(function(k){if(k.slice(-8)==="_"+rec.month)delete S.logs[k]});
+  Object.keys(S.deds).forEach(function(k){if(k.slice(-8)==="_"+rec.month)delete S.deds[k]});
+  sv();render();
+}
 
 // ═══ 엑셀 ═══
 // 숫자 셀에 콤마 서식 적용
@@ -962,6 +1454,12 @@ function exAll(){
 // ═══ 설정 ═══
 function rSet(){
   return'<div class="ss"><h3>📖 도움말</h3><div class="sbb"><button class="bt" style="background:var(--purple)" onclick="openManual()">사용설명서 보기</button></div></div>'
+  +'<div class="ss" style="margin-top:20px"><h3>🤖 AI 자동입력 설정 (제미나이 API 키)</h3>'
+  +(getKey()
+    ?'<div style="font-size:14px;color:var(--green);font-weight:600;margin-bottom:10px">✅ API 키가 저장되어 있습니다 ('+esc(getKey().slice(0,6))+'······)</div><div class="sbb"><button class="bt bd" onclick="dlKey()">키 삭제하기</button></div>'
+    :'<div class="iw"><input type="text" id="gkey" placeholder="발급받은 키를 붙여넣으세요" autocomplete="off"></div><div class="sbb"><button class="bt" onclick="svKey()">키 저장하기</button></div>')
+  +'<div style="font-size:13px;color:var(--dim);margin-top:8px;line-height:1.5">키를 저장하면 사진·글 자동입력 기능을 쓸 수 있습니다. 키는 이 휴대폰에만 저장되며 외부로 나가지 않습니다.</div></div>'
+  +'<div class="ss" style="margin-top:20px"><h3>👥 직원 정리</h3><div class="sbb"><button class="bt" onclick="setTab(0)">직원 목록 보기 (이름·시급 고치기 / 삭제)</button></div><div style="font-size:13px;color:var(--dim);margin-top:8px;line-height:1.5">자동입력으로 추가된 분들의 이름이나 시급을 고치거나, 잘못 추가된 분을 삭제할 수 있습니다.</div></div>'
   +'<div class="ss" style="margin-top:20px"><h3>🔐 데이터 백업 / 복원 (암호화)</h3><div class="sbb"><button class="bt" onclick="bk()">데이터 백업하기</button><button class="bt bt-o" onclick="restoreClick()">백업 파일에서 복원하기</button></div><div style="font-size:13px;color:var(--dim);margin-top:8px;line-height:1.5">백업 파일은 비밀번호로 암호화됩니다. 같은 비밀번호로만 복원할 수 있으니 꼭 기억하세요.</div></div>'
   +'<div class="ss" style="margin-top:20px"><h3>📊 엑셀</h3><div class="sbb"><button class="bt bt-g" onclick="exAll()">전체 엑셀 다운로드</button></div></div>'
   +'<div class="ss" style="margin-top:20px"><h3>⚠️ 초기화</h3><div class="sbb"><button class="bt" style="background:var(--red)" onclick="rst()">모든 데이터 삭제</button></div></div>'
@@ -975,6 +1473,17 @@ function rSet(){
   +'· 캐시 삭제 전에 꼭 백업하세요<br><br>'
   +'<strong style="color:var(--text)">자세한 사용법은 위의 "사용설명서 보기"를 누르세요</strong></div>';
 }
+// ─── 제미나이 API 키 관리 ───
+function getKey(){return localStorage.getItem("gemini-key")||""}
+function svKey(){
+  var v=document.getElementById("gkey").value.trim();
+  if(!v)return alert("API 키를 입력해 주세요");
+  localStorage.setItem("gemini-key",v);
+  alert("저장되었습니다.\n\n이제 직원 등록 화면에서 사진·글 자동입력을 쓸 수 있습니다.");
+  render();
+}
+function dlKey(){if(!confirm("저장된 API 키를 삭제하시겠습니까?\n사진·글 자동입력 기능이 꺼집니다."))return;localStorage.removeItem("gemini-key");render()}
+
 // ─── 백업 암호화 (AES-256-GCM, Web Crypto API) ───
 async function deriveKey(password,salt){
   var enc=new TextEncoder();
@@ -1032,6 +1541,27 @@ function bk(){
 }
 function restoreClick(){document.getElementById("rfi").click()}
 document.getElementById("rfi").addEventListener("change",function(e){var f=e.target.files[0];if(!f)return;var self=this;var pw=prompt("백업 파일의 비밀번호를 입력하세요");if(!pw){self.value="";return}var r=new FileReader();r.onload=function(ev){try{var raw=ev.target.result;if(typeof raw==="string"){try{var d=JSON.parse(raw);if(d.emps){if(!confirm("암호화되지 않은 구 버전 백업입니다. 복원하시겠습니까?\n\n현재 데이터가 덮어씌워집니다.")){self.value="";return}S.emps=d.emps;S.recs=d.recs||[];S.logs=d.logs||{};S.deds=d.deds||{};migrate();sv();render();alert("복원 완료되었습니다.");self.value="";return;}}catch(je){}}var buf=new Uint8Array(raw);decryptData(buf,pw).then(function(txt){var d=JSON.parse(txt);if(!d.emps)throw new Error("올바른 데이터가 아닙니다.");if(!confirm("복원하시겠습니까?\n현재 데이터가 덮어씌워집니다.")){self.value="";return}S.emps=d.emps;S.recs=d.recs||[];S.logs=d.logs||{};S.deds=d.deds||{};migrate();sv();render();alert("복원 완료되었습니다.");self.value="";}).catch(function(err){alert("복원 실패\n\n비밀번호가 틀렸거나 파일이 손상되었습니다.");self.value="";});}catch(err){alert("파일을 읽을 수 없습니다.");self.value="";}};r.onerror=function(){alert("파일 읽기 오류");self.value="";};if(f.name.endsWith(".json")){r.readAsText(f);}else{r.readAsArrayBuffer(f);}});
+// 사진 선택 → 제미나이 분석
+document.getElementById("pfi").addEventListener("change",function(e){
+  var f=e.target.files[0];this.value="";
+  if(!f)return;
+  if(!getKey()){alert("사진 자동입력을 쓰려면 먼저 [설정] 탭에서\n제미나이 API 키를 저장해 주세요.");return}
+  var r=new FileReader();
+  r.onload=function(ev){
+    var b64=String(ev.target.result).split(",")[1];
+    if(!b64){alert("사진을 읽을 수 없습니다. 다른 사진으로 시도해 주세요.");return}
+    var isWork=PFI_MODE==="work";
+    var busy=isWork?setWBusy:setBusy, btn=isWork?"btnWPho":"btnPho";
+    var prompt=isWork?gemWorkPrompt():gemPrompt();
+    var done=isWork?showWorkPreview:fillEmpForm;
+    busy(true,btn);
+    callGemini([{text:prompt},{inline_data:{mime_type:f.type||"image/jpeg",data:b64}}],
+      function(o){busy(false,btn);done(o)},
+      function(err){busy(false,btn);alert("사진 분석에 실패했습니다.\n\n"+(err&&err.message?err.message:"알 수 없는 오류"))});
+  };
+  r.onerror=function(){alert("사진 읽기 오류가 발생했습니다.")};
+  r.readAsDataURL(f);
+});
 function rst(){if(!confirm("모든 데이터를 삭제하시겠습니까?"))return;if(!confirm("마지막 확인입니다."))return;S.emps=[];S.recs=[];S.logs={};S.deds={};sv();render()}
 function openManual(){document.getElementById("manualOv").classList.add("show");document.body.style.overflow="hidden";window.scrollTo(0,0)}
 function closeManual(){document.getElementById("manualOv").classList.remove("show");document.body.style.overflow=""}
