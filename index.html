@@ -1217,7 +1217,12 @@ function isWorked(eid,day){
 function tgWork(eid){
   var l=getLog(eid,S.month,S.selDay);
   if(isWorked(eid,S.selDay)){
-    // uncheck: remove this day's record
+    // 시간이 입력돼 있으면 실수로 지우지 않도록 확인창을 띄움
+    if(l.start||l.end){
+      var e=S.emps.find(function(x){return x.id===eid});
+      var t=(l.start?fmtTime(l.start):"")+(l.end?" ~ "+fmtTime(l.end):"");
+      if(!confirm('"'+(e?e.name:"")+'" 님의 '+(+S.month.split("-")[1])+'월 '+S.selDay+'일 근무기록('+t+')을\n지우시겠습니까?'))return;
+    }
     var k=eid+"_"+S.month;
     if(S.logs[k]&&S.logs[k][S.selDay]){delete S.logs[k][S.selDay];sv();}
   }else{

@@ -1,5 +1,5 @@
 // 급여 계산기 서비스 워커 - 오프라인 지원
-var CACHE = "wage-app-v6";
+var CACHE = "wage-app-v7";
 var FILES = [
   "./index.html",
   "./manifest.json",
