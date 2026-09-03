@@ -418,12 +418,12 @@ var EMP_COLORS=["#6c8cff","#34d399","#fb923c","#f87171","#a78bfa","#f472b6","#38
 function empColor(idx){return EMP_COLORS[idx%EMP_COLORS.length]}
 // 숨길 탭 번호 (0=직원관리). 나중에 직원관리를 다시 쓰려면 []로 바꾸세요
 var HIDDEN_TABS=[0];
-var S={tab:1,emps:[],recs:[],logs:{},deds:{},showForm:false,editId:null,selDay:null,expSum:null,expRec:null,workPrev:null,
+var S={tab:1,emps:[],recs:[],logs:{},deds:{},tax33:{},tax33Emp:{},showForm:false,editId:null,selDay:null,expSum:null,expRec:null,workPrev:null,
   month:(function(){var d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")})(),
   filter:"active"};
 var fGender="male";
 
-function load(){try{var d=JSON.parse(localStorage.getItem(SK));if(d){S.emps=d.emps||[];S.recs=d.recs||[];S.logs=d.logs||{};S.deds=d.deds||{};migrate()}}catch(e){}}
+function load(){try{var d=JSON.parse(localStorage.getItem(SK));if(d){S.emps=d.emps||[];S.recs=d.recs||[];S.logs=d.logs||{};S.deds=d.deds||{};S.tax33=d.tax33||{};S.tax33Emp=d.tax33Emp||{};migrate()}}catch(e){}}
 function migrate(){
   S.emps.forEach(function(e){
     if(!e.wageHistory||!e.wageHistory.length){
@@ -437,9 +437,16 @@ function migrate(){
     }
   });
 }
-function sv(){localStorage.setItem(SK,JSON.stringify({emps:S.emps,recs:S.recs,logs:S.logs,deds:S.deds}))}
+function sv(){localStorage.setItem(SK,JSON.stringify({emps:S.emps,recs:S.recs,logs:S.logs,deds:S.deds,tax33:S.tax33,tax33Emp:S.tax33Emp}))}
 function gid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 function fm(n){return Math.round(n).toLocaleString("ko-KR")}
+function monthHours(pay){return pay.details.reduce(function(s,d){return s+d.total},0)}
+function isTax33(mo){return !!S.tax33[mo]}
+function tax33For(eid,mo){var k=eid+"_"+mo;return Object.prototype.hasOwnProperty.call(S.tax33Emp,k)?S.tax33Emp[k]:isTax33(mo)}
+function allTax33(mo){var emps=payrollE(mo).filter(function(e){return !e.hidden});return emps.length>0&&emps.every(function(e){return tax33For(e.id,mo)})}
+function payResult(pay,ded,eid,mo){var tax=tax33For(eid,mo)?pay.total*0.033:0;return{tax:tax,final:Math.max(0,pay.total-tax-ded.amount)}}
+function setTax33(checked){S.tax33[S.month]=checked;Object.keys(S.tax33Emp).forEach(function(k){if(k.slice(-8)==="_"+S.month)delete S.tax33Emp[k]});sv();render()}
+function setEmpTax33(eid,checked){S.tax33Emp[eid+"_"+S.month]=checked;sv();render()}
 function esc(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML}
 function dim(mo){var p=mo.split("-");return new Date(+p[0],+p[1],0).getDate()}
 function dow(mo,d){var p=mo.split("-");return new Date(+p[0],+p[1]-1,d).getDay()}
@@ -1167,29 +1174,34 @@ function rCalc(){
 
   // Monthly summary per employee (숨긴 직원은 요약 표시에서만 제외)
   h+='<div style="font-size:14px;font-weight:700;margin:16px 0 10px">📊 월간 급여 요약'+(hiddenCnt?' <span style="font-size:12px;font-weight:500;color:var(--dim)">('+hiddenCnt+'명 숨김 — 저장에는 포함됩니다)</span>':'')+'</div>';
-  var grandT=0;
+  h+='<label class="cd" style="display:flex;align-items:center;gap:10px;padding:14px 16px;cursor:pointer"><input type="checkbox" style="width:20px;height:20px;accent-color:var(--accent);flex-shrink:0"'+(allTax33(S.month)?' checked':'')+' onchange="setTax33(this.checked)"><span><b>전체 직원 3.3% 공제</b><small style="display:block;color:var(--dim);font-weight:400;margin-top:3px">전체 적용 후 직원별로 다시 켜거나 끌 수 있습니다.</small></span></label>';
+  var grandT=0,grandH=0;
   payrollE(S.month).filter(function(e){return !e.hidden}).forEach(function(e){
     var pay=calcMonthPay(e,S.month);
     var ded=getDed(e.id,S.month);
-    var finalPay=Math.max(0,pay.total-ded.amount);
+    var result=payResult(pay,ded,e.id,S.month),finalPay=result.final;
     grandT+=finalPay;
+    grandH+=monthHours(pay);
     var open=S.expSum===e.id,gi=e.gender==="female"?"👩":"👨";
     var bds=e.status==="resigned"?'<span class="bg bgp">퇴사</span>':'';
     if(pay.weekly>0)bds+='<span class="bg bgg">주휴</span>';
     if(pay.night>0)bds+='<span class="bg bgo">야간</span>';
     if(pay.ot>0)bds+='<span class="bg bga">연장</span>';
     if(pay.hol>0)bds+='<span class="bg bgr">휴일</span>';
+    if(result.tax>0)bds+='<span class="bg bgp">3.3% 공제</span>';
     if(ded.amount>0)bds+='<span class="bg bgr">삭감</span>';
     h+='<div class="sum-card" onclick="tgS(\''+e.id+'\')">';
-    h+='<div class="ch"><div><span class="en">'+gi+' '+esc(e.name)+'</span>'+bds+'</div>';
+    h+='<div class="ch"><div><span class="en">'+gi+' '+esc(e.name)+'</span>'+bds+'<label style="display:flex;align-items:center;gap:5px;margin:8px 0 0;font-size:12px;color:var(--purple);cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" style="width:17px;height:17px;accent-color:var(--purple)"'+(tax33For(e.id,S.month)?' checked':'')+' onchange="setEmpTax33(\''+e.id+'\',this.checked)">3.3% 공제</label></div>';
     h+='<div style="text-align:right"><div style="font-size:16px;font-weight:700;color:var(--accent)">'+fm(finalPay)+'원</div>';
     h+='<div style="font-size:11px;color:var(--dim)">'+(open?"접기 ▲":"상세 ▼")+'</div></div></div>';
     if(open){
       h+='<div class="det" onclick="event.stopPropagation()">';
       pay.weeks.forEach(function(w){h+='<div class="ws'+(w.ok?" ok":"")+'">'+w.week+'주차: <b>'+w.hours+'h / '+w.days+'일</b>'+(w.ok?' ✓ 주휴 '+fm(w.pay)+'원':' (미충족)')+'</div>';});
+      h+='<div class="pr"><span class="pl">월 총 근무시간</span><span class="pv">'+monthHours(pay).toFixed(1)+'시간</span></div>';
       var items=[["기본급",pay.base,1],["주휴수당",pay.weekly,pay.weekly>0],["야간수당",pay.night,pay.night>0],["연장수당",pay.ot,pay.ot>0],["휴일수당",pay.hol,pay.hol>0]];
       items.forEach(function(it){if(it[2])h+='<div class="pr"><span class="pl">'+it[0]+'</span><span class="pv">'+fm(it[1])+'원</span></div>';});
       h+='<div class="pr"><span class="pl">급여 합계</span><span class="pv">'+fm(pay.total)+'원</span></div>';
+      if(result.tax>0)h+='<div class="pr"><span class="pl" style="color:var(--purple)">3.3% 공제</span><span class="pv" style="color:var(--purple)">-'+fm(result.tax)+'원</span></div>';
       // 삭감 입력
       h+='<div style="margin-top:12px;background:var(--rs);border-radius:10px;padding:12px">';
       h+='<div style="font-size:12px;font-weight:600;color:var(--red);margin-bottom:8px">➖ 삭감</div>';
@@ -1204,7 +1216,7 @@ function rCalc(){
     }
     h+='</div>';
   });
-  h+='<div class="cd gt"><div class="tr"><span class="tl">전체 합계</span><span class="tv" style="font-size:22px">'+fm(grandT)+'원</span></div></div>';
+  h+='<div class="cd gt"><div class="pr"><span class="pl">전체 월 총 근무시간</span><span class="pv">'+grandH.toFixed(1)+'시간</span></div><div class="tr"><span class="tl">전체 합계</span><span class="tv" style="font-size:22px">'+fm(grandT)+'원</span></div></div>';
   h+='<button class="bt bt-g" style="margin-top:8px" onclick="svRec()">'+y+'년 '+m+'월 급여 기록 저장</button>';
   return h;
 }
@@ -1313,11 +1325,11 @@ function svRec(){
   var details=emps.map(function(e){
     var pay=calcMonthPay(e,S.month);
     var ded=getDed(e.id,S.month);
-    var finalPay=Math.max(0,pay.total-ded.amount);
-    return Object.assign({},e,{pay:pay,ded:ded,finalPay:finalPay});
+    var result=payResult(pay,ded,e.id,S.month);
+    return Object.assign({},e,{pay:pay,ded:ded,tax33:result.tax,finalPay:result.final});
   });
   var tot=details.reduce(function(s,d){return s+d.finalPay},0);
-  var rec={id:gid(),month:S.month,details:details,totalAll:tot,savedAt:new Date().toISOString()};
+  var rec={id:gid(),month:S.month,details:details,totalAll:tot,tax33Applied:isTax33(S.month),savedAt:new Date().toISOString()};
   S.recs=[rec].concat(S.recs.filter(function(r){return r.month!==S.month}));
   sv();S.tab=2;render();
 }
@@ -1342,6 +1354,7 @@ function rRec(){
       h+='<div class="pr" style="padding:8px 0"><span style="font-size:14px">'+gi+' '+esc(d.name)+(d.ded&&d.ded.amount>0?' <span class="bg bgr">삭감</span>':'')+' <span style="font-size:11px;color:var(--dim)">'+(open?"▲":"▼")+'</span></span><span style="font-size:14px;font-weight:600">'+fm(fp)+'원</span></div>';
       if(open){
         var p=d.pay;
+        h+='<div class="pr" style="padding:5px 0"><span class="pl" style="font-size:13px;font-weight:700">월 총 근무시간</span><span class="pv" style="font-size:13px;font-weight:700">'+monthHours(p).toFixed(1)+'시간</span></div>';
         h+='<div style="background:var(--ibg);border-radius:10px;padding:10px 14px;margin:4px 0 8px">';
         // 검증 계산식: 시간 합계 및 시급
         var totH=0,nH=0,oH=0,holH=0,wageSet={};
@@ -1370,7 +1383,8 @@ function rRec(){
             h+=fml('= 총 '+totH.toFixed(1)+'h (기간별 시급 적용: '+wages.map(function(w){return fm(+w)+'원'}).join(', ')+')');
           }
         });
-        if(d.ded&&d.ded.amount>0){
+        if(d.tax33>0)h+='<div class="pr" style="padding:5px 0"><span class="pl" style="font-size:13px;color:var(--purple)">3.3% 공제</span><span class="pv" style="font-size:13px;color:var(--purple)">-'+fm(d.tax33)+'원</span></div>';
+        if((d.ded&&d.ded.amount>0)||d.tax33>0){
           h+='<div class="pr" style="padding:5px 0"><span class="pl" style="font-size:13px;color:var(--red)">삭감'+(d.ded.note?' ('+esc(d.ded.note)+')':'')+'</span><span class="pv" style="font-size:13px;color:var(--red)">-'+fm(d.ded.amount)+'원</span></div>';
           h+='<div class="pr" style="padding:5px 0"><span class="pl" style="font-size:13px;font-weight:700">최종 지급액</span><span class="pv" style="font-size:13px;font-weight:700">'+fm(fp)+'원</span></div>';
         }
@@ -1388,6 +1402,8 @@ function rRec(){
       }
       h+='</div>';
     });
+    var recHours=rec.details.reduce(function(s,d){return s+monthHours(d.pay)},0);
+    h+='<div class="pr"><span class="pl">전체 월 총 근무시간</span><span class="pv">'+recHours.toFixed(1)+'시간</span></div>';
     h+='<div class="tr"><span class="tl">합계</span><span class="tv">'+fm(rec.totalAll)+'원</span></div>';
     h+='<div style="font-size:11px;color:var(--dim);margin-top:8px;text-align:right">저장: '+new Date(rec.savedAt).toLocaleDateString("ko-KR")+'</div></div>';
     return h;
@@ -1421,15 +1437,15 @@ function exXl(rid){
   var rec=S.recs.find(function(r){return r.id===rid});if(!rec)return;
   var ym=rec.month.split("-").map(Number),y=ym[0],m=ym[1];
   var wb=XLSX.utils.book_new();
-  var sum=[[y+'년 '+m+'월 급여'],[],['이름','성별','연락처','시급','기본급','주휴','야간','연장','휴일','급여합계','삭감','비고','최종지급액']];
+  var sum=[[y+'년 '+m+'월 급여'],[],['이름','성별','연락처','시급','월 총 근무시간','기본급','주휴','야간','연장','휴일','급여합계','3.3% 공제','삭감','비고','최종지급액']];
   rec.details.forEach(function(d){
     var dedAmt=(d.ded&&d.ded.amount)||0;
     var dedNote=(d.ded&&d.ded.note)||"";
     var fp=(d.finalPay!==undefined)?d.finalPay:d.pay.total;
-    sum.push([d.name,d.gender==="female"?"여":"남",d.phone||"",d.wage,Math.round(d.pay.base),Math.round(d.pay.weekly),Math.round(d.pay.night),Math.round(d.pay.ot),Math.round(d.pay.hol),Math.round(d.pay.total),dedAmt?-dedAmt:0,dedNote,Math.round(fp)]);
+    sum.push([d.name,d.gender==="female"?"여":"남",d.phone||"",d.wage,+monthHours(d.pay).toFixed(1),Math.round(d.pay.base),Math.round(d.pay.weekly),Math.round(d.pay.night),Math.round(d.pay.ot),Math.round(d.pay.hol),Math.round(d.pay.total),d.tax33?-Math.round(d.tax33):0,dedAmt?-dedAmt:0,dedNote,Math.round(fp)]);
   });
-  sum.push([],['','','','','','','','','','','','합계',Math.round(rec.totalAll)]);
-  var ws1=XLSX.utils.aoa_to_sheet(sum);ws1["!cols"]=[{wch:10},{wch:5},{wch:14},{wch:9},{wch:12},{wch:12},{wch:12},{wch:12},{wch:12},{wch:12},{wch:10},{wch:16},{wch:13}];
+  sum.push([],['','','','','','','','','','','','','','합계',Math.round(rec.totalAll)]);
+  var ws1=XLSX.utils.aoa_to_sheet(sum);ws1["!cols"]=[{wch:10},{wch:5},{wch:14},{wch:9},{wch:14},{wch:12},{wch:12},{wch:12},{wch:12},{wch:12},{wch:12},{wch:12},{wch:10},{wch:16},{wch:13}];
   applyComma(ws1);
   XLSX.utils.book_append_sheet(wb,ws1,"급여요약");
   rec.details.forEach(function(d){if(d.pay.details){
@@ -1444,15 +1460,15 @@ function exAll(){
   if(!S.recs.length)return alert("기록이 없습니다");
   var wb=XLSX.utils.book_new();
   S.recs.forEach(function(rec){var ym=rec.month.split("-").map(Number),y=ym[0],m=ym[1];
-    var rows=[[y+'년 '+m+'월'],[],['이름','기본급','주휴','야간','연장','휴일','급여합계','삭감','비고','최종지급액']];
+    var rows=[[y+'년 '+m+'월'],[],['이름','월 총 근무시간','기본급','주휴','야간','연장','휴일','급여합계','3.3% 공제','삭감','비고','최종지급액']];
     rec.details.forEach(function(d){
       var dedAmt=(d.ded&&d.ded.amount)||0;
       var dedNote=(d.ded&&d.ded.note)||"";
       var fp=(d.finalPay!==undefined)?d.finalPay:d.pay.total;
-      rows.push([d.name,Math.round(d.pay.base),Math.round(d.pay.weekly),Math.round(d.pay.night),Math.round(d.pay.ot),Math.round(d.pay.hol),Math.round(d.pay.total),dedAmt?-dedAmt:0,dedNote,Math.round(fp)]);
+      rows.push([d.name,+monthHours(d.pay).toFixed(1),Math.round(d.pay.base),Math.round(d.pay.weekly),Math.round(d.pay.night),Math.round(d.pay.ot),Math.round(d.pay.hol),Math.round(d.pay.total),d.tax33?-Math.round(d.tax33):0,dedAmt?-dedAmt:0,dedNote,Math.round(fp)]);
     });
-    rows.push([],['','','','','','','','','합계',Math.round(rec.totalAll)]);
-    var ws=XLSX.utils.aoa_to_sheet(rows);applyComma(ws);ws["!cols"]=[{wch:10},{wch:12},{wch:12},{wch:12},{wch:12},{wch:12},{wch:12},{wch:10},{wch:16},{wch:13}];XLSX.utils.book_append_sheet(wb,ws,y+"년"+m+"월");});
+    rows.push([],['','','','','','','','','','','합계',Math.round(rec.totalAll)]);
+    var ws=XLSX.utils.aoa_to_sheet(rows);applyComma(ws);ws["!cols"]=[{wch:10},{wch:14},{wch:12},{wch:12},{wch:12},{wch:12},{wch:12},{wch:12},{wch:12},{wch:10},{wch:16},{wch:13}];XLSX.utils.book_append_sheet(wb,ws,y+"년"+m+"월");});
   XLSX.writeFile(wb,"급여_전체.xlsx");
 }
 
@@ -1532,7 +1548,7 @@ function bk(){
   if(pw.length<4){alert("비밀번호는 4자 이상이어야 합니다.");return}
   var pw2=prompt("비밀번호를 한 번 더 입력하세요");
   if(pw!==pw2){alert("비밀번호가 일치하지 않습니다.");return}
-  var data={emps:S.emps,recs:S.recs,logs:S.logs,deds:S.deds,at:new Date().toISOString()};
+  var data={emps:S.emps,recs:S.recs,logs:S.logs,deds:S.deds,tax33:S.tax33,tax33Emp:S.tax33Emp,at:new Date().toISOString()};
   encryptData(JSON.stringify(data),pw).then(function(buf){
     var blob=new Blob([buf],{type:"application/octet-stream"});
     var u=URL.createObjectURL(blob);
@@ -1545,7 +1561,7 @@ function bk(){
   }).catch(function(e){alert("백업 실패: "+e.message)});
 }
 function restoreClick(){document.getElementById("rfi").click()}
-document.getElementById("rfi").addEventListener("change",function(e){var f=e.target.files[0];if(!f)return;var self=this;var pw=prompt("백업 파일의 비밀번호를 입력하세요");if(!pw){self.value="";return}var r=new FileReader();r.onload=function(ev){try{var raw=ev.target.result;if(typeof raw==="string"){try{var d=JSON.parse(raw);if(d.emps){if(!confirm("암호화되지 않은 구 버전 백업입니다. 복원하시겠습니까?\n\n현재 데이터가 덮어씌워집니다.")){self.value="";return}S.emps=d.emps;S.recs=d.recs||[];S.logs=d.logs||{};S.deds=d.deds||{};migrate();sv();render();alert("복원 완료되었습니다.");self.value="";return;}}catch(je){}}var buf=new Uint8Array(raw);decryptData(buf,pw).then(function(txt){var d=JSON.parse(txt);if(!d.emps)throw new Error("올바른 데이터가 아닙니다.");if(!confirm("복원하시겠습니까?\n현재 데이터가 덮어씌워집니다.")){self.value="";return}S.emps=d.emps;S.recs=d.recs||[];S.logs=d.logs||{};S.deds=d.deds||{};migrate();sv();render();alert("복원 완료되었습니다.");self.value="";}).catch(function(err){alert("복원 실패\n\n비밀번호가 틀렸거나 파일이 손상되었습니다.");self.value="";});}catch(err){alert("파일을 읽을 수 없습니다.");self.value="";}};r.onerror=function(){alert("파일 읽기 오류");self.value="";};if(f.name.endsWith(".json")){r.readAsText(f);}else{r.readAsArrayBuffer(f);}});
+document.getElementById("rfi").addEventListener("change",function(e){var f=e.target.files[0];if(!f)return;var self=this;var pw=prompt("백업 파일의 비밀번호를 입력하세요");if(!pw){self.value="";return}var r=new FileReader();r.onload=function(ev){try{var raw=ev.target.result;if(typeof raw==="string"){try{var d=JSON.parse(raw);if(d.emps){if(!confirm("암호화되지 않은 구 버전 백업입니다. 복원하시겠습니까?\n\n현재 데이터가 덮어씌워집니다.")){self.value="";return}S.emps=d.emps;S.recs=d.recs||[];S.logs=d.logs||{};S.deds=d.deds||{};S.tax33=d.tax33||{};S.tax33Emp=d.tax33Emp||{};migrate();sv();render();alert("복원 완료되었습니다.");self.value="";return;}}catch(je){}}var buf=new Uint8Array(raw);decryptData(buf,pw).then(function(txt){var d=JSON.parse(txt);if(!d.emps)throw new Error("올바른 데이터가 아닙니다.");if(!confirm("복원하시겠습니까?\n현재 데이터가 덮어씌워집니다.")){self.value="";return}S.emps=d.emps;S.recs=d.recs||[];S.logs=d.logs||{};S.deds=d.deds||{};S.tax33=d.tax33||{};S.tax33Emp=d.tax33Emp||{};migrate();sv();render();alert("복원 완료되었습니다.");self.value="";}).catch(function(err){alert("복원 실패\n\n비밀번호가 틀렸거나 파일이 손상되었습니다.");self.value="";});}catch(err){alert("파일을 읽을 수 없습니다.");self.value="";}};r.onerror=function(){alert("파일 읽기 오류");self.value="";};if(f.name.endsWith(".json")){r.readAsText(f);}else{r.readAsArrayBuffer(f);}});
 // 사진 선택 → 제미나이 분석
 document.getElementById("pfi").addEventListener("change",function(e){
   var f=e.target.files[0];this.value="";
@@ -1567,7 +1583,7 @@ document.getElementById("pfi").addEventListener("change",function(e){
   r.onerror=function(){alert("사진 읽기 오류가 발생했습니다.")};
   r.readAsDataURL(f);
 });
-function rst(){if(!confirm("모든 데이터를 삭제하시겠습니까?"))return;if(!confirm("마지막 확인입니다."))return;S.emps=[];S.recs=[];S.logs={};S.deds={};sv();render()}
+function rst(){if(!confirm("모든 데이터를 삭제하시겠습니까?"))return;if(!confirm("마지막 확인입니다."))return;S.emps=[];S.recs=[];S.logs={};S.deds={};S.tax33={};S.tax33Emp={};sv();render()}
 function openManual(){document.getElementById("manualOv").classList.add("show");document.body.style.overflow="hidden";window.scrollTo(0,0)}
 function closeManual(){document.getElementById("manualOv").classList.remove("show");document.body.style.overflow=""}
 function jumpTo(id){var el=document.getElementById(id);if(el)el.scrollIntoView({behavior:"smooth",block:"start"})}
